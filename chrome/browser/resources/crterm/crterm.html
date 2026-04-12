@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="dark">
+  <base href="chrome://crterm/">
+  <title>$i18n{title}</title>
+  <link rel="stylesheet" href="crterm_xterm.css">
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #111;
+    }
+
+    body {
+      display: flex;
+    }
+  </style>
+  <script src="crterm_xterm.js"></script>
+</head>
+<body>
+  <crterm-app></crterm-app>
+  <script type="module" src="crterm_app.js"></script>
+</body>
+</html>

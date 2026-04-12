@@ -1,0 +1,5 @@
+Package: crterm
+Version: 1.0
+Maintainer: wrxzzj@gmail.com
+Architecture: amd64
+Description: CrTerm is a powerful Terminal based on chromium, with chrome extension support

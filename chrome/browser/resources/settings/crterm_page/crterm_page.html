@@ -1,0 +1,146 @@
+<style include="cr-shared-style settings-shared">
+  .control {
+    max-width: 640px;
+    min-width: 320px;
+    width: 100%;
+  }
+
+  .control textarea,
+  .control input,
+  .control select {
+    background: var(--cr-card-background-color);
+    border: 1px solid var(--cr-separator-color);
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: var(--cr-primary-text-color);
+    font: inherit;
+    width: 100%;
+  }
+
+  .control textarea,
+  .control input {
+    padding: 10px 12px;
+  }
+
+  .control select {
+    min-height: 40px;
+    padding: 0 12px;
+  }
+
+  .control textarea {
+    line-height: 1.5;
+    min-height: 180px;
+    resize: vertical;
+  }
+
+  .field-title {
+    font-weight: 500;
+  }
+
+  .field-copy {
+    padding-inline-end: 24px;
+  }
+
+  .field-inline {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+  }
+
+  .field-row {
+    align-items: center;
+    gap: 24px;
+  }
+
+  .field-row .field-title {
+    flex: 0 0 180px;
+  }
+
+  .field-row .control {
+    flex: 1;
+    max-width: none;
+  }
+
+  .field-row settings-dropdown-menu {
+    flex: 1;
+  }
+
+  .toggle-row {
+    align-items: center;
+    display: flex;
+    gap: 24px;
+  }
+
+  .toggle-row .field-title {
+    flex: 1;
+  }
+</style>
+
+<settings-section page-title="$i18n{crTermPageTitle}"
+    class="cr-centered-card-container">
+  <div class="cr-row first">
+    <div class="flex cr-padded-text field-inline">
+      <div class="field-title">$i18n{crTermTermThemeLabel}</div>
+      <div class="secondary">$i18n{crTermTermThemeDescription}</div>
+    </div>
+  </div>
+
+  <div class="cr-row">
+    <div class="control">
+      <textarea value="{{termTheme_::input}}" rows="10" spellcheck="false"
+          on-input="onTermThemeInput_">
+      </textarea>
+    </div>
+  </div>
+
+  <div class="cr-row field-row">
+    <div class="field-title">$i18n{crTermDefaultShellLabel}</div>
+    <div class="control">
+      <input type="text" value="[[defaultShell_]]"
+          on-input="onDefaultShellInput_"
+          placeholder="$i18n{crTermDefaultShellDescription}">
+    </div>
+  </div>
+
+  <div class="cr-row field-row">
+    <div class="field-title">$i18n{crTermFontFamilyLabel}</div>
+    <settings-dropdown-menu label="$i18n{crTermFontFamilyLabel}"
+        pref="{{prefs.crterm.font_family}}"
+        menu-options="[[fontFamilyOptions_]]">
+    </settings-dropdown-menu>
+  </div>
+
+  <div class="cr-row field-row">
+    <div class="field-title">$i18n{crTermFontSizeLabel}</div>
+    <div class="control">
+      <input type="text" inputmode="numeric" pattern="[0-9]*"
+          value="[[fontSize_]]" on-input="onFontSizeInput_"
+          on-blur="onFontSizeBlur_"
+          placeholder="$i18n{crTermFontSizeDescription}">
+    </div>
+  </div>
+
+  <div class="cr-row field-row">
+    <div class="field-title">$i18n{crTermLimitScrollbackLabel}</div>
+    <div class="control">
+      <input type="text" inputmode="numeric" pattern="[0-9]*"
+          value="[[limitScrollback_]]" on-input="onLimitScrollbackInput_"
+          on-blur="onLimitScrollbackBlur_"
+          placeholder="$i18n{crTermLimitScrollbackDescription}">
+    </div>
+  </div>
+
+  <div class="cr-row toggle-row">
+    <div class="field-title">$i18n{crTermRestoreTerminalOutputLabel}</div>
+    <cr-toggle
+        checked="[[prefs.crterm.restore_terminal_output_on_startup.value]]"
+        on-change="onRestoreTerminalOutputToggleChanged_"
+        aria-label="$i18n{crTermRestoreTerminalOutputLabel}">
+    </cr-toggle>
+  </div>
+
+  <settings-toggle-button no-extension-indicator
+      label="$i18n{crTermCloseButtonLabel}"
+      pref="{{prefs.crterm.close_button_visible}}">
+  </settings-toggle-button>
+</settings-section>

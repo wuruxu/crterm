@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<grit-part>
+  <structure type="chrome_scaled_image" name="IDR_CRTERM_FAVICON" file="crterm_ui/crterm-favicon.png" />
+</grit-part>

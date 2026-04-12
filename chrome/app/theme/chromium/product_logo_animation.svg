@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="terminalBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#20242B"/>
+      <stop offset="100%" stop-color="#0F1115"/>
+    </linearGradient>
+
+    <filter id="softShadow" x="-20%" y="-20%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Replaced background -->
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#terminalBg)" filter="url(#softShadow)"/>
+
+  <!-- top dots -->
+  <g opacity="0.95">
+    <circle cx="84" cy="84" r="10" fill="#EA4335" />
+    <circle cx="120" cy="84" r="10" fill="#FBBC05" />
+    <circle cx="156" cy="84" r="10" fill="#34A853" />
+  </g>
+
+  <line x1="32" y1="120" x2="480" y2="120" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2" />
+
+  <g filter="url(#dropShadow)">
+    <path d="M 116 208 L 164 264 L 116 320" stroke="#A8C7FA" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.9"/>
+
+    <rect x="204" y="184" width="60" height="40" rx="10" fill="#EA4335" />
+    <rect x="272" y="184" width="60" height="40" rx="10" fill="#FBBC05" />
+    <rect x="248" y="232" width="40" height="96" rx="10" fill="#34A853" />
+    <rect x="348" y="288" width="40" height="40" rx="8" fill="#4285F4" />
+  </g>
+
+  <!-- highlight -->
+  <path d="M64 56
+           C126 34, 228 30, 336 48
+           C284 50, 197 67, 130 112
+           C100 101, 77 83, 64 56Z"
+        fill="#FFFFFF" opacity="0.08"/>
+
+  <!-- border -->
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="none" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+
+  <text x="256" y="432" fill="#8AB4F8" font-family="'Google Sans Code', ui-monospace, monospace, 'Courier New', Courier, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" letter-spacing="6" opacity="0.8">crTerm</text>
+</svg>
