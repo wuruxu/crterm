@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NewTerm specific strings (included from generated_resources.grd). -->
+<grit-part>
+  <message name="IDS_NEWTERM_QUICKSTART_TITLE" desc="Title for the chrome://newterm page.">
+    Quickstart
+  </message>
+  <message name="IDS_NEWTERM_OPEN_IN_HOME" desc="Button label for opening a terminal in the user's home directory.">
+    Open in Home
+  </message>
+  <message name="IDS_NEWTERM_OPEN_IN_DIRECTORY" desc="Button label for opening a terminal in a directory. The placeholder is a path like /tmp and should not be translated.">
+    Open in <ph name="DIRECTORY">$1<ex>/tmp</ex></ph>
+  </message>
+  <message name="IDS_NEWTERM_INSTALL_COMMAND" desc="Label shown above the install command snippet on the chrome://newterm page.">
+    Install command
+  </message>
+</grit-part>

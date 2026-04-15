@@ -1,0 +1,135 @@
+<!--
+Copyright 2026 The Chromium Authors
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <base href="chrome://newterm/">
+  <title>$i18n{newTermQuickstartTitle}</title>
+  <link rel="stylesheet" href="newterm.css">
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>$i18n{newTermQuickstartTitle}</h1>
+      <div class="actions">
+        <cr-button id="openHomeButton" class="action-button terminal-button">
+          <span class="terminal-glyph" slot="prefix-icon" aria-hidden="true">&gt;_</span>
+          <span class="button-title">$i18n{newTermOpenInHome}</span>
+        </cr-button>
+        <cr-button id="openTmpButton" class="action-button terminal-button">
+          <span class="terminal-glyph" slot="prefix-icon" aria-hidden="true">&gt;_</span>
+          <span class="button-title">$i18n{newTermOpenInTmp}</span>
+        </cr-button>
+      </div>
+    </section>
+
+    <section class="surface">
+      <div class="tabs-header">
+        <p class="tabs-kicker">Coding Agent</p>
+      </div>
+      <div class="tab-strip" role="tablist" aria-label="Codex install commands">
+        <button id="openaiTab" class="tab-button is-active" role="tab"
+            aria-selected="true" aria-controls="openaiPanel" data-tab-target="openaiPanel">
+          <span class="chatgpt-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M11.98 1.75a3.6 3.6 0 0 1 3.12 1.8l.37.65.76-.02a3.6 3.6 0 0 1 3.18 5.26l-.37.66.39.65a3.6 3.6 0 0 1-1.32 4.92l-.66.38v.75a3.6 3.6 0 0 1-4.5 3.5l-.73-.19-.56.52a3.6 3.6 0 0 1-5.99-1.97l-.12-.75-.73-.18a3.6 3.6 0 0 1-2.55-4.57l.23-.72-.56-.5a3.6 3.6 0 0 1 .3-5.57l.62-.42-.12-.75A3.6 3.6 0 0 1 8.8 2.34l.74.15.56-.53a3.58 3.58 0 0 1 1.88-.21Zm-2.4 5.36-1.66.96a1.86 1.86 0 0 0-.95 1.87l.18 1.06 2.43-1.41 2.12 1.22V8.36L9.58 7.11Zm4.83.02-2.1 1.22v2.45l2.1-1.22 2.43 1.4.18-1.06a1.85 1.85 0 0 0-.94-1.87l-1.67-.96Zm-5.86 5.4-2.12 1.22.79.8a1.85 1.85 0 0 0 1.97.43l1-.36v-2.09l-1.64-1Zm7.1.02-1.65.97v2.09l1 .36a1.85 1.85 0 0 0 1.97-.44l.79-.79-2.11-1.22Zm-3.96 2.83-2.12.76-.31 2.79 1.01-.36a1.86 1.86 0 0 0 1.22-1.68l.2-1.51Zm.63 0 .2 1.5a1.85 1.85 0 0 0 1.22 1.69l1 .36-.3-2.79-2.12-.76Z"/>
+            </svg>
+          </span>
+         Codex 
+        </button>
+        <button id="openai2Tab" class="tab-button" role="tab"
+            aria-selected="false" aria-controls="openai2Panel" data-tab-target="openai2Panel">
+          <span class="chatgpt-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M11.98 1.75a3.6 3.6 0 0 1 3.12 1.8l.37.65.76-.02a3.6 3.6 0 0 1 3.18 5.26l-.37.66.39.65a3.6 3.6 0 0 1-1.32 4.92l-.66.38v.75a3.6 3.6 0 0 1-4.5 3.5l-.73-.19-.56.52a3.6 3.6 0 0 1-5.99-1.97l-.12-.75-.73-.18a3.6 3.6 0 0 1-2.55-4.57l.23-.72-.56-.5a3.6 3.6 0 0 1 .3-5.57l.62-.42-.12-.75A3.6 3.6 0 0 1 8.8 2.34l.74.15.56-.53a3.58 3.58 0 0 1 1.88-.21Zm-2.4 5.36-1.66.96a1.86 1.86 0 0 0-.95 1.87l.18 1.06 2.43-1.41 2.12 1.22V8.36L9.58 7.11Zm4.83.02-2.1 1.22v2.45l2.1-1.22 2.43 1.4.18-1.06a1.85 1.85 0 0 0-.94-1.87l-1.67-.96Zm-5.86 5.4-2.12 1.22.79.8a1.85 1.85 0 0 0 1.97.43l1-.36v-2.09l-1.64-1Zm7.1.02-1.65.97v2.09l1 .36a1.85 1.85 0 0 0 1.97-.44l.79-.79-2.11-1.22Zm-3.96 2.83-2.12.76-.31 2.79 1.01-.36a1.86 1.86 0 0 0 1.22-1.68l.2-1.51Zm.63 0 .2 1.5a1.85 1.85 0 0 0 1.22 1.69l1 .36-.3-2.79-2.12-.76Z"/>
+            </svg>
+          </span>
+          Claude Code
+        </button>
+      </div>
+
+      <section id="openaiPanel" class="tab-panel is-active" role="tabpanel"
+          aria-labelledby="openaiTab">
+        <div class="panel-header">
+          <p class="panel-label">$i18n{newTermInstallCommand}</p>
+          <button class="copy-button" type="button"
+              data-copy-text="npm i -g @openai/codex">
+            Copy
+          </button>
+        </div>
+        <pre class="command-block">npm i -g @openai/codex</pre>
+      </section>
+
+      <section id="openai2Panel" class="tab-panel" role="tabpanel"
+          aria-labelledby="openai2Tab" hidden>
+        <div class="panel-header">
+          <p class="panel-label">$i18n{newTermInstallCommand}</p>
+          <button class="copy-button" type="button"
+              data-copy-text="curl -fsSL https://claude.ai/install.sh | bash">
+            Copy
+          </button>
+        </div>
+        <pre class="command-block">curl -fsSL https://claude.ai/install.sh | bash</pre>
+      </section>
+    </section>
+
+    <p class="upgrade-hint">
+      <span class="upgrade-icon" aria-hidden="true">
+        <svg viewBox="0 0 512 512" focusable="false">
+          <defs>
+            <linearGradient id="upgradeTerminalBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#20242B"/>
+              <stop offset="100%" stop-color="#0F1115"/>
+            </linearGradient>
+
+            <filter id="upgradeSoftShadow" x="-20%" y="-20%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="12" stdDeviation="16"
+                  flood-color="#000000" flood-opacity="0.28"/>
+            </filter>
+
+            <filter id="upgradeDropShadow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="8" stdDeviation="12"
+                  flood-color="#000000" flood-opacity="0.35"/>
+            </filter>
+          </defs>
+
+          <rect x="32" y="32" width="448" height="448" rx="96"
+              fill="url(#upgradeTerminalBg)" filter="url(#upgradeSoftShadow)"/>
+
+          <g opacity="0.95">
+            <circle cx="84" cy="84" r="10" fill="#EA4335"/>
+            <circle cx="120" cy="84" r="10" fill="#FBBC05"/>
+            <circle cx="156" cy="84" r="10" fill="#34A853"/>
+          </g>
+
+          <line x1="32" y1="120" x2="480" y2="120"
+              stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+
+          <g filter="url(#upgradeDropShadow)">
+            <rect x="168" y="184" width="68" height="40" rx="9" fill="#EA4335"/>
+            <rect x="244" y="184" width="68" height="40" rx="9" fill="#FBBC05"/>
+            <rect x="220" y="232" width="40" height="116" rx="9" fill="#34A853"/>
+            <rect x="320" y="316" width="60" height="32" rx="6" fill="#4285F4"/>
+          </g>
+
+          <path d="M64 56
+                   C126 34, 228 30, 336 48
+                   C284 50, 197 67, 130 112
+                   C100 101, 77 83, 64 56Z"
+              fill="#FFFFFF" opacity="0.08"/>
+
+          <rect x="32" y="32" width="448" height="448" rx="96"
+              fill="none" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+        </svg>
+      </span>
+      <span>crTerm v146</span>
+    </p>
+  </main>
+  <script type="module" src="newterm.js"></script>
+</body>
+</html>
