@@ -15,9 +15,27 @@ export function getHtml(this: CrTermAppElement) {
           @input="${this.onSearchInput_}"
           @keydown="${this.onSearchKeyDown_}">
       <div class="search-count">${this.getSearchCountLabel_()}</div>
-      <button class="search-button" @click="${this.findPrevious_}">Prev</button>
-      <button class="search-button" @click="${this.findNext_}">Next</button>
-      <button class="search-button" @click="${this.closeSearch_}">Close</button>
+      <cr-icon-button
+          class="search-icon-button"
+          iron-icon="cr:arrow-drop-up"
+          title="Prev"
+          aria-label="Prev"
+          @click="${this.findPrevious_}">
+      </cr-icon-button>
+      <cr-icon-button
+          class="search-icon-button"
+          iron-icon="cr:arrow-drop-down"
+          title="Next"
+          aria-label="Next"
+          @click="${this.findNext_}">
+      </cr-icon-button>
+      <cr-icon-button
+          class="search-icon-button"
+          iron-icon="cr:close"
+          title="Close"
+          aria-label="Close"
+          @click="${this.closeSearch_}">
+      </cr-icon-button>
     </div>` : ''}
   ${this.searchVisible_ && this.searchMarkerStyles_.length ? html`
     <div class="search-marker-layer">

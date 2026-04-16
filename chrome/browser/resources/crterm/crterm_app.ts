@@ -1,5 +1,8 @@
 import '/strings.m.js';
 
+import 'chrome://resources/cr_elements/cr_icon_button/cr_icon_button.js';
+import 'chrome://resources/cr_elements/icons.html.js';
+
 import {loadTimeData} from 'chrome://resources/js/load_time_data.js';
 import {CrLitElement, type PropertyValues} from 'chrome://resources/lit/v3_0/lit.rollup.js';
 
@@ -13,6 +16,7 @@ declare var Terminal: any;
 
 const LOG_CRTERM_TRAFFIC = true;
 const TERMINAL_RESIZE_DEBOUNCE_MS = 120;
+const SEARCH_REFRESH_DEBOUNCE_MS = 120;
 const HTTPS_LINK_PATTERN = /https:\/\/[^\s<>"'`]+/g;
 const TERMINAL_TITLE_PATTERN = /([a-z_][a-z0-9_-]*@[a-z0-9._-]+)/i;
 
@@ -29,12 +33,15 @@ export class CrTermAppElement extends CrLitElement {
   private term_: any = null;
   private resizeObserver_: ResizeObserver|null = null;
   private resizeTimeoutId_: number|null = null;
+  private searchRefreshTimeoutId_: number|null = null;
   private outputDecoder_: TextDecoder = new TextDecoder();
   private pendingOscSequence_: string = '';
   private pendingBackendCols_: number|null = null;
   private pendingBackendRows_: number|null = null;
   private keydownListener_: ((event: KeyboardEvent) => void)|null = null;
   private searchMatches_: Array<{row: number, column: number}> = [];
+  private lastSearchScanBaseY_: number = 0;
+  private lastSearchScanBufferLength_: number = 0;
   private searchRenderListener_: {dispose(): void}|null = null;
   private searchScrollListener_: {dispose(): void}|null = null;
   private searchResizeListener_: {dispose(): void}|null = null;
@@ -460,6 +467,10 @@ export class CrTermAppElement extends CrLitElement {
       window.clearTimeout(this.resizeTimeoutId_);
       this.resizeTimeoutId_ = null;
     }
+    if (this.searchRefreshTimeoutId_ !== null) {
+      window.clearTimeout(this.searchRefreshTimeoutId_);
+      this.searchRefreshTimeoutId_ = null;
+    }
     this.pendingBackendCols_ = null;
     this.pendingBackendRows_ = null;
     if (this.keydownListener_) {
@@ -537,7 +548,7 @@ export class CrTermAppElement extends CrLitElement {
     }
 
     this.updateTitleFromTerminalOutput_(sanitizedOutput);
-    this.term_.write(sanitizedOutput);
+    this.term_.write(sanitizedOutput, () => this.scheduleSearchRefresh_());
   }
 
   private writeRestoreBanner_() {
@@ -556,7 +567,7 @@ export class CrTermAppElement extends CrLitElement {
 
   protected onSearchInput_(event: Event) {
     this.searchQuery_ = (event.target as HTMLInputElement).value;
-    this.updateSearchMatches_();
+    this.updateSearchMatches_({reveal: true});
   }
 
   protected onSearchKeyDown_(event: KeyboardEvent) {
@@ -589,6 +600,7 @@ export class CrTermAppElement extends CrLitElement {
     this.searchQuery_ = '';
     this.searchMatches_ = [];
     this.searchMatchIndex_ = -1;
+    this.resetSearchScanState_();
     this.searchHighlightStyles_ = [];
     this.searchMarkerStyles_ = [];
     this.term_?.focus();
@@ -632,19 +644,113 @@ export class CrTermAppElement extends CrLitElement {
     return true;
   }
 
-  private updateSearchMatches_() {
-    this.searchMatches_ = [];
-    this.searchMatchIndex_ = -1;
-    this.searchHighlightStyles_ = [];
-    this.searchMarkerStyles_ = [];
+  private scheduleSearchRefresh_() {
+    if (!this.searchVisible_ || !this.searchQuery_.trim()) {
+      return;
+    }
+
+    if (this.searchRefreshTimeoutId_ !== null) {
+      window.clearTimeout(this.searchRefreshTimeoutId_);
+    }
+
+    this.searchRefreshTimeoutId_ = window.setTimeout(() => {
+      this.searchRefreshTimeoutId_ = null;
+      this.updateSearchMatches_({incremental: true, preserveCurrent: true});
+    }, SEARCH_REFRESH_DEBOUNCE_MS);
+  }
+
+  private updateSearchMatches_(
+      options: {
+        incremental?: boolean,
+        reveal?: boolean,
+        preserveCurrent?: boolean,
+      } = {}) {
+    const previousMatch = options.preserveCurrent ?
+        this.searchMatches_[this.searchMatchIndex_] :
+        null;
+    const previousIndex = this.searchMatchIndex_;
 
     const query = this.searchQuery_.trim().toLowerCase();
     if (!query || !this.term_?.buffer?.active) {
+      this.searchMatches_ = [];
+      this.searchMatchIndex_ = -1;
+      this.searchHighlightStyles_ = [];
+      this.searchMarkerStyles_ = [];
+      this.resetSearchScanState_();
+      this.requestUpdate();
       return;
     }
 
     const buffer = this.term_.buffer.active;
-    for (let row = 0; row < buffer.length; row++) {
+    const bufferLength = buffer.length ?? 0;
+    const baseY = buffer.baseY ?? 0;
+    const canIncrementalScan =
+        options.incremental && this.lastSearchScanBufferLength_ > 0 &&
+        bufferLength > 0 && bufferLength >= this.lastSearchScanBufferLength_;
+
+    if (!canIncrementalScan) {
+      this.searchMatches_ = [];
+      this.searchMatchIndex_ = -1;
+      this.searchHighlightStyles_ = [];
+      this.searchMarkerStyles_ = [];
+      this.scanSearchRows_(query, 0, bufferLength);
+    } else {
+      const baseYDelta = Math.max(0, baseY - this.lastSearchScanBaseY_);
+      if (baseYDelta > 0 &&
+          bufferLength === this.lastSearchScanBufferLength_) {
+        this.searchMatches_ = this.searchMatches_
+            .map(match => ({row: match.row - baseYDelta, column: match.column}))
+            .filter(match => match.row >= 0);
+      }
+
+      const firstDirtyRow =
+          bufferLength > this.lastSearchScanBufferLength_ ?
+              Math.max(0, this.lastSearchScanBufferLength_ - 1) :
+              Math.max(0, bufferLength - Math.max(baseYDelta, 1) - 1);
+      this.searchMatches_ =
+          this.searchMatches_.filter(match => match.row < firstDirtyRow);
+      this.scanSearchRows_(query, firstDirtyRow, bufferLength);
+    }
+
+    this.lastSearchScanBaseY_ = baseY;
+    this.lastSearchScanBufferLength_ = bufferLength;
+
+    if (this.searchMatches_.length) {
+      if (previousMatch) {
+        this.searchMatchIndex_ = this.searchMatches_.findIndex(match =>
+          match.row === previousMatch.row &&
+          match.column === previousMatch.column);
+      }
+      if (this.searchMatchIndex_ === -1 && options.preserveCurrent &&
+          previousIndex >= 0) {
+        this.searchMatchIndex_ =
+            Math.min(previousIndex, this.searchMatches_.length - 1);
+      }
+      if (this.searchMatchIndex_ === -1) {
+        this.searchMatchIndex_ = 0;
+      }
+
+      if (options.reveal) {
+        this.revealSearchMatch_();
+      } else {
+        this.updateSearchHighlightOverlay_();
+      }
+    } else {
+      this.searchMatchIndex_ = -1;
+      this.searchHighlightStyles_ = [];
+      this.searchMarkerStyles_ = [];
+    }
+
+    this.requestUpdate();
+  }
+
+  private scanSearchRows_(query: string, startRow: number, endRow: number) {
+    const buffer = this.term_?.buffer?.active;
+    if (!buffer) {
+      return;
+    }
+
+    for (let row = startRow; row < endRow; row++) {
       const line = buffer.getLine(row);
       const text = line?.translateToString(true) || '';
       let fromIndex = 0;
@@ -658,11 +764,11 @@ export class CrTermAppElement extends CrLitElement {
         fromIndex = matchIndex + Math.max(query.length, 1);
       }
     }
+  }
 
-    if (this.searchMatches_.length) {
-      this.searchMatchIndex_ = 0;
-      this.revealSearchMatch_();
-    }
+  private resetSearchScanState_() {
+    this.lastSearchScanBaseY_ = 0;
+    this.lastSearchScanBufferLength_ = 0;
   }
 
   private jumpToSearchMatch_(direction: number) {

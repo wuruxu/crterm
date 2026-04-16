@@ -409,6 +409,37 @@ cr-button {
   word-break: break-word;
 }
 
+.command-link {
+  align-items: center;
+  color: rgba(146, 255, 198, 0.76);
+  display: inline-flex;
+  gap: 6px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  margin-top: 10px;
+  text-decoration: none;
+  transition: color 180ms ease, filter 180ms ease, text-shadow 180ms ease;
+}
+
+.command-link-prefix {
+  color: rgba(196, 236, 214, 0.62);
+}
+
+.command-link-text {
+  align-items: center;
+  display: inline-flex;
+  line-height: 1;
+}
+
+.command-link:hover {
+  color: #f0fff8;
+  filter: brightness(1.06);
+  text-shadow:
+      0 0 10px rgba(98, 255, 173, 0.16),
+      0 0 18px rgba(98, 255, 173, 0.08);
+}
+
 .upgrade-hint {
   align-items: center;
   color: rgba(196, 236, 214, 0.74);
@@ -484,7 +515,7 @@ cr-button {
   }
 
   .command-block {
-    font-size: 15px;
+    font-size: 13px;
     min-height: 72px;
     padding: 16px 16px;
   }
