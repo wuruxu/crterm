@@ -5,7 +5,6 @@
     width: 100%;
   }
 
-  .control textarea,
   .control input,
   .control select {
     background: var(--cr-card-background-color);
@@ -17,7 +16,6 @@
     width: 100%;
   }
 
-  .control textarea,
   .control input {
     padding: 10px 12px;
   }
@@ -27,24 +25,8 @@
     padding: 0 12px;
   }
 
-  .control textarea {
-    line-height: 1.5;
-    min-height: 180px;
-    resize: vertical;
-  }
-
   .field-title {
     font-weight: 500;
-  }
-
-  .field-copy {
-    padding-inline-end: 24px;
-  }
-
-  .field-inline {
-    align-items: center;
-    display: flex;
-    gap: 12px;
   }
 
   .field-row {
@@ -61,8 +43,121 @@
     max-width: none;
   }
 
-  .field-row settings-dropdown-menu {
+  .end-aligned-control {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .end-aligned-control input,
+  .end-aligned-control settings-dropdown-menu {
+    flex: 0 0 200px;
+    width: 200px;
+  }
+
+  .font-size-control {
+    align-items: center;
+    display: flex;
+  }
+
+  .font-size-control settings-slider {
     flex: 1;
+    justify-content: flex-end;
+  }
+
+  .terminal-font-preview-frame {
+    height: 126px;
+    margin: 0 20px 20px;
+    position: relative;
+  }
+
+  .terminal-font-preview {
+    background: #111;
+    border: 1px solid var(--cr-separator-color);
+    border-radius: 12px;
+    box-sizing: border-box;
+    color: #e6edf3;
+    height: 100%;
+    overflow: hidden;
+    padding: 10px 14px;
+  }
+
+  .terminal-font-preview .xterm {
+    height: 100%;
+    width: 100%;
+  }
+
+  .terminal-theme-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 20px;
+  }
+
+  .terminal-theme-card {
+    border: 2px solid transparent;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .16);
+    box-sizing: border-box;
+    cursor: pointer;
+    font: inherit;
+    min-height: 178px;
+    padding: 14px;
+    text-align: start;
+    transition: border-color 120ms ease, box-shadow 120ms ease,
+        transform 120ms ease;
+  }
+
+  .terminal-theme-card:hover {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .22);
+    transform: translateY(-1px);
+  }
+
+  .terminal-theme-card.selected {
+    border-color: var(--cr-focus-outline-color);
+  }
+
+  .terminal-theme-name {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    margin-bottom: 22px;
+  }
+
+  .terminal-theme-sample {
+    font-family: monospace;
+    font-size: 18px;
+    line-height: 1.18;
+    margin-bottom: 18px;
+    min-height: 64px;
+    opacity: .82;
+    white-space: pre-line;
+  }
+
+  .terminal-theme-swatches {
+    display: flex;
+    gap: 6px;
+  }
+
+  .terminal-theme-swatch {
+    border-radius: 4px;
+    height: 18px;
+    width: 26px;
+  }
+
+  .terminal-preview-greeting {
+    color: #e6edf3;
+    font-family: monospace;
+    font-size: 14px;
+    left: 50%;
+    line-height: 1.2;
+    pointer-events: none;
+    position: absolute;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(88, 166, 255, .55);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    z-index: 1;
   }
 
   .toggle-row {
@@ -74,28 +169,19 @@
   .toggle-row .field-title {
     flex: 1;
   }
+
+  @media (max-width: 720px) {
+    .terminal-theme-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 
 <settings-section page-title="$i18n{crTermPageTitle}"
     class="cr-centered-card-container">
-  <div class="cr-row first">
-    <div class="flex cr-padded-text field-inline">
-      <div class="field-title">$i18n{crTermTermThemeLabel}</div>
-      <div class="secondary">$i18n{crTermTermThemeDescription}</div>
-    </div>
-  </div>
-
-  <div class="cr-row">
-    <div class="control">
-      <textarea value="{{termTheme_::input}}" rows="10" spellcheck="false"
-          on-input="onTermThemeInput_">
-      </textarea>
-    </div>
-  </div>
-
-  <div class="cr-row field-row">
+  <div class="cr-row first field-row">
     <div class="field-title">$i18n{crTermDefaultShellLabel}</div>
-    <div class="control">
+    <div class="control end-aligned-control">
       <input type="text" value="[[defaultShell_]]"
           on-input="onDefaultShellInput_"
           placeholder="$i18n{crTermDefaultShellDescription}">
@@ -103,26 +189,8 @@
   </div>
 
   <div class="cr-row field-row">
-    <div class="field-title">$i18n{crTermFontFamilyLabel}</div>
-    <settings-dropdown-menu label="$i18n{crTermFontFamilyLabel}"
-        pref="{{prefs.crterm.font_family}}"
-        menu-options="[[fontFamilyOptions_]]">
-    </settings-dropdown-menu>
-  </div>
-
-  <div class="cr-row field-row">
-    <div class="field-title">$i18n{crTermFontSizeLabel}</div>
-    <div class="control">
-      <input type="text" inputmode="numeric" pattern="[0-9]*"
-          value="[[fontSize_]]" on-input="onFontSizeInput_"
-          on-blur="onFontSizeBlur_"
-          placeholder="$i18n{crTermFontSizeDescription}">
-    </div>
-  </div>
-
-  <div class="cr-row field-row">
     <div class="field-title">$i18n{crTermLimitScrollbackLabel}</div>
-    <div class="control">
+    <div class="control end-aligned-control">
       <input type="text" inputmode="numeric" pattern="[0-9]*"
           value="[[limitScrollback_]]" on-input="onLimitScrollbackInput_"
           on-blur="onLimitScrollbackBlur_"
@@ -143,4 +211,65 @@
       label="$i18n{crTermCloseButtonLabel}"
       pref="{{prefs.crterm.close_button_visible}}">
   </settings-toggle-button>
+</settings-section>
+
+<settings-section page-title="Terminal Themes"
+    class="cr-centered-card-container">
+  <div class="terminal-theme-grid">
+    <template is="dom-repeat" items="[[terminalThemePalettes_]]" as="palette">
+      <button class$="terminal-theme-card [[getTerminalThemeSelectedClass_(
+                  palette.id, selectedTerminalThemeId_)]]"
+          type="button"
+          data-palette-id$="[[palette.id]]"
+          style$="[[getTerminalThemeCardStyle_(palette, terminalThemeStyle_)]]"
+          aria-pressed$="[[isTerminalThemeSelected_(
+              palette.id, selectedTerminalThemeId_)]]"
+          on-click="onTerminalThemePaletteClick_">
+        <div class="terminal-theme-name">[[palette.name]]</div>
+        <div class="terminal-theme-sample">[[getTerminalThemeSampleText_()]]</div>
+        <div class="terminal-theme-swatches" aria-hidden="true">
+          <template is="dom-repeat"
+              items="[[getTerminalThemeSwatches_(
+                  palette, terminalThemeStyle_)]]"
+              as="color">
+            <span class="terminal-theme-swatch"
+                style$="background:[[color]]"></span>
+          </template>
+        </div>
+      </button>
+    </template>
+  </div>
+</settings-section>
+
+<settings-section page-title="$i18n{crTermTerminalFontSectionTitle}"
+    class="cr-centered-card-container">
+  <div class="cr-row first field-row">
+    <div class="field-title">$i18n{crTermFontFamilyLabel}</div>
+    <div class="control end-aligned-control">
+      <settings-dropdown-menu label="$i18n{crTermFontFamilyLabel}"
+          pref="{{prefs.crterm.font_family}}"
+          menu-options="[[fontFamilyOptions_]]">
+      </settings-dropdown-menu>
+    </div>
+  </div>
+
+  <div class="cr-row field-row">
+    <div class="field-title">$i18n{crTermFontSizeLabel}</div>
+    <div class="control font-size-control">
+      <settings-slider id="fontSizeSlider"
+          pref="{{prefs.crterm.font_size}}"
+          ticks="[[fontSizeTicks_]]"
+          label-aria="$i18n{crTermFontSizeLabel}"
+          label-min="$i18n{tiny}"
+          label-max="$i18n{huge}">
+      </settings-slider>
+    </div>
+  </div>
+
+  <div class="terminal-font-preview-frame">
+    <div id="terminalFontPreview" class="terminal-font-preview"></div>
+    <div id="terminalPreviewGreeting" class="terminal-preview-greeting">
+      Hello crTerm !
+    </div>
+  </div>
 </settings-section>
