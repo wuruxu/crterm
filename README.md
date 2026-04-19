@@ -1,32 +1,34 @@
-# crTerm
+<h1>
+  <img src="crTerm.png" alt="crTerm logo" width="36" height="36" style="vertical-align: middle;">
+  crTerm
+</h1>
 
-crTerm is a new terminal experience built for people who live in the browser.
+crTerm is a modern terminal experience built for the AI era.
 
-It brings a real local shell into Chromium, gives terminal sessions the same shape as browser tabs, and keeps the performance profile close to a native application through a C++ backend. It is also designed to be expanded with Chrome extensions, so terminal workflows can grow through the same extension model that already powers the browser.
+It brings a real local shell into Chromium, gives terminal sessions the familiar feel of browser tabs, and delivers native-level performance through a C++ backend. crTerm is also designed to be extended with Chrome extensions, so terminal workflows can grow through the same extension model that already powers the browser.
 
 ![crTerm fullscreen terminal UI](gallery/fullscreen.png)
 
 ## Why crTerm
 
-Traditional terminals are powerful, but they sit outside the browser workflow. crTerm changes that by making the terminal a first-class browser surface:
+crTerm makes the terminal a first-class browser surface:
 
-- Open terminal sessions in Chromium tabs.
+- Open terminal sessions as Chrome tabs.
 - Move between web pages and shells with the same tab model.
-- Use browser navigation, profile settings, address bar state, and session restore concepts.
+- Use browser tab group, history, bookmark, and session restore.
 - Click links from terminal output and continue in the browser.
-- Keep project terminals close to the documentation, dashboards, repositories, and tools you already use online.
+- Keep project terminals close to the documentation, dashboards, repositories, and online tools you already use.
 
-The result is not a web page pretending to be a terminal. crTerm is a browser-native terminal experience backed by native system integration.
+crTerm is a browser-native terminal experience backed by native integration.
 
 ## Key Ideas
 
 ### Browser-Style Terminal Experience
 
-crTerm makes terminal sessions feel like part of Chromium instead of a separate application window.
+crTerm makes terminal sessions feel like Web Browser:
 
-- Launch a terminal from `chrome://crterm/` or `chrome://newterm/`.
-- Open a terminal directly in a target directory.
-- See the current working directory reflected in the address bar, for example `crterm://local/home/user/project`.
+- Use Chrome's powerful tab management for multiple terminal sessions.
+- Customize the terminal with rich theme and appearance settings.
 - Search terminal output with `Ctrl+F` or `Cmd+F`.
 - Open HTTPS links from terminal output in new browser tabs.
 - Restore previous terminal output when restore is enabled.
@@ -36,21 +38,21 @@ crTerm makes terminal sessions feel like part of Chromium instead of a separate 
 
 ### Native Performance in C++
 
-crTerm is implemented with Chromium-native components and a C++ terminal backend. It connects to the local PTY/ConPTY layer instead of simulating a shell in JavaScript.
+crTerm is implemented with Chromium-native components and a C++ terminal PTY backend.
 
 That means:
 
 - Real local shell processes.
 - Native process and terminal I/O handling.
-- Fast startup and responsive input.
+- Fast startup and responsive input handling.
 - Tight integration with Chromium WebUI, Mojo, preferences, and browser lifecycle.
 - A terminal surface that feels browser-native without giving up native execution.
 
 ### Extensible with Chrome Extensions
 
-crTerm supports Chrome extensions as a way to extend terminal behavior and browser-terminal workflows.
+crTerm supports Chrome extensions, making it possible to extend terminal behavior and browser-terminal workflows.
 
-This makes it possible to build features around the terminal using familiar browser extension patterns, such as:
+You can build features around the terminal using familiar browser extension patterns, such as:
 
 - Project-specific terminal helpers.
 - Workflow automation.
@@ -58,7 +60,7 @@ This makes it possible to build features around the terminal using familiar brow
 - Context-aware commands.
 - Browser UI that works alongside terminal sessions.
 
-The goal is for crTerm to be more than a fixed terminal application: it should be a terminal platform that can be customized and expanded like the browser itself.
+The goal is for crTerm to be more than a fixed terminal application. It is a terminal platform that can be customized and expanded like the browser itself.
 
 ![crTerm terminal search and output](gallery/gallery03.png)
 
@@ -74,21 +76,16 @@ git status
 npm test
 ```
 
-When command output contains an HTTPS link, click it to open the link in Chromium.
-
-When you need to find earlier output, press `Ctrl+F` or `Cmd+F` and search inside the terminal tab.
-
 ## Features
 
 - **Browser-native workflow**: terminal sessions live in Chromium tabs.
 - **Real shell access**: commands run through the local system shell, backed by PTY/ConPTY integration.
 - **C++ native backend**: terminal process handling and browser integration are implemented with native Chromium components.
 - **Chrome extension support**: extend terminal workflows through Chrome extensions.
-- **Path-aware sessions**: the current directory is visible in the browser address bar.
-- **Clickable output links**: HTTPS links in terminal output open directly in the browser.
+- **Clickable output links**: HTTPS links in terminal output open directly in the crTerm.
 - **Output restore**: previous terminal output can be restored across sessions.
 - **Customizable appearance**: configure shell, theme, font, font size, scrollback, and restore behavior.
 
 ## Project Vision
 
-crTerm turns Chromium into a local command-line workspace. It combines the interaction model of the browser, the performance of native C++, and the flexibility of Chrome extensions to create a terminal that feels modern, fast, and deeply integrated with everyday development work.
+crTerm aims to become the modern terminal for the AI era. It gives developers, product managers, creators, and designers a first-class interactive experience, making the terminal feel as familiar and approachable as the browser.
