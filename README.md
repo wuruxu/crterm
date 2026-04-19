@@ -13,11 +13,9 @@ It brings a real local shell into Chromium, gives terminal sessions the familiar
 
 crTerm makes the terminal a first-class browser surface:
 
-- Open terminal sessions as Chrome tabs.
-- Move between web pages and shells with the same tab model.
+- Open terminal as Chrome tab, and move between Windows.
 - Use browser tab group, history, bookmark, and session restore.
-- Click links from terminal output and continue in the browser.
-- Keep project terminals close to the documentation, dashboards, repositories, and online tools you already use.
+- Click links from terminal output and continue in the crTerm.
 
 crTerm is a browser-native terminal experience backed by native integration.
 
