@@ -1,5 +1,5 @@
 <h1>
-  <img src="crTerm.png" alt="crTerm logo" width="36" height="36" style="vertical-align: middle;">
+  <img src="crTerm.png" alt="crTerm logo" width="56" height="56" style="vertical-align: middle;">
   crTerm
 </h1>
 
