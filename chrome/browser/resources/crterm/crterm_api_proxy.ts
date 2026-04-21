@@ -3,7 +3,8 @@ import {PageCallbackRouter, PageHandlerFactory, PageHandlerRemote} from './crter
 export interface CrTermProxy {
   onUserInput(input: string): void;
   onTerminalResize(cols: number, rows: number): void;
-  getStoredTerminalOutput(): Promise<{output: number[]}>;
+  setPageTitle(title: string): void;
+  getStoredTerminalOutput(): Promise<{output: number[], sessionId: string}>;
   getTerminalSettings(): Promise<{
     settings: {
       termTheme: string,
@@ -37,6 +38,10 @@ export class CrTermProxyImpl implements CrTermProxy {
 
   onTerminalResize(cols: number, rows: number) {
     this.handler.onTerminalResize(cols, rows);
+  }
+
+  setPageTitle(title: string) {
+    this.handler.setPageTitle(title);
   }
 
   getStoredTerminalOutput() {

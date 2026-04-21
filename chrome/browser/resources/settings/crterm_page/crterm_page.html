@@ -1,4 +1,8 @@
 <style include="cr-shared-style settings-shared">
+  .cr-padded-text {
+    flex: 1;
+  }
+
   .control {
     max-width: 640px;
     min-width: 320px;
@@ -160,16 +164,6 @@
     z-index: 1;
   }
 
-  .toggle-row {
-    align-items: center;
-    display: flex;
-    gap: 24px;
-  }
-
-  .toggle-row .field-title {
-    flex: 1;
-  }
-
   @media (max-width: 720px) {
     .terminal-theme-grid {
       grid-template-columns: 1fr;
@@ -198,20 +192,34 @@
     </div>
   </div>
 
-  <div class="cr-row toggle-row">
-    <div class="field-title">$i18n{crTermRestoreTerminalOutputLabel}</div>
-    <cr-toggle
-        checked="[[prefs.crterm.restore_terminal_output_on_startup.value]]"
-        on-change="onRestoreTerminalOutputToggleChanged_"
-        aria-label="$i18n{crTermRestoreTerminalOutputLabel}">
-    </cr-toggle>
-  </div>
-
   <settings-toggle-button no-extension-indicator
       label="$i18n{crTermCloseButtonLabel}"
       pref="{{prefs.crterm.close_button_visible}}">
   </settings-toggle-button>
+
+  <settings-toggle-button no-extension-indicator
+      label="$i18n{crTermRestoreTerminalOutputLabel}"
+      pref="{{prefs.crterm.restore_terminal_output_on_startup}}">
+  </settings-toggle-button>
+
+  <div class="cr-row continuation">
+    <div class="cr-padded-text">
+      $i18n{crTermCleanupInactiveSessionLabel}
+      <div class="secondary">
+        $i18n{crTermCleanupInactiveSessionDescription}
+      </div>
+    </div>
+    <cr-button id="cleanupInactiveSessionButton"
+        on-click="onCleanupInactiveSessionClick_"
+        aria-label="$i18n{crTermCleanupInactiveSessionButton}">
+      $i18n{crTermCleanupInactiveSessionButton}
+    </cr-button>
+  </div>
 </settings-section>
+
+<cr-toast id="cleanupInactiveSessionToast" duration="5000">
+  <div>[[cleanupInactiveSessionToastText_]]</div>
+</cr-toast>
 
 <settings-section page-title="$i18n{crTermTerminalThemesSectionTitle}"
     class="cr-centered-card-container">

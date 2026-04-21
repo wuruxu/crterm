@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 import 'chrome://resources/cr_elements/cr_shared_style.css.js';
-import 'chrome://resources/cr_elements/cr_toggle/cr_toggle.js';
+import 'chrome://resources/cr_elements/cr_button/cr_button.js';
+import 'chrome://resources/cr_elements/cr_toast/cr_toast.js';
 import '../controls/settings_dropdown_menu.js';
 import '../controls/settings_slider.js';
 import '../controls/settings_toggle_button.js';
@@ -13,7 +14,9 @@ import '../settings_shared.css.js';
 import type {FontsData} from '/shared/settings/appearance_page/fonts_browser_proxy.js';
 import {FontsBrowserProxyImpl} from '/shared/settings/appearance_page/fonts_browser_proxy.js';
 import {PrefsMixin} from '/shared/settings/prefs/prefs_mixin.js';
+import type {CrToastElement} from 'chrome://resources/cr_elements/cr_toast/cr_toast.js';
 import type {SliderTick} from 'chrome://resources/cr_elements/cr_slider/cr_slider.js';
+import {PluralStringProxyImpl} from 'chrome://resources/js/plural_string_proxy.js';
 import {getTrustedScriptURL} from 'chrome://resources/js/static_types.js';
 import {PolymerElement} from 'chrome://resources/polymer/v3_0/polymer/polymer_bundled.min.js';
 
@@ -525,6 +528,12 @@ const TERMINAL_THEME_PALETTES: TerminalThemePalette[] = [
 
 const SettingsCrTermPageElementBase = PrefsMixin(PolymerElement);
 
+export interface SettingsCrTermPageElement {
+  $: {
+    cleanupInactiveSessionToast: CrToastElement,
+  };
+}
+
 export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
     implements SettingsPlugin {
   static get is() {
@@ -541,6 +550,7 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
         type: String,
         value: '/usr/bin/bash',
       },
+      cleanupInactiveSessionToastText_: String,
       fontFamilyOptions_: {
         type: Array,
         value: () => [{value: 'monospace', name: 'monospace'}],
@@ -602,6 +612,7 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
   private crtermOutputListenerId_: number|null = null;
   private terminalPreviewOutputBuffer_: string = '';
   private terminalPreviewDataListener_: {dispose(): void}|null = null;
+  declare private cleanupInactiveSessionToastText_: string;
   declare private defaultShell_: string;
   declare private fontFamilyOptions_: DropdownMenuOptionList;
   declare private fontSizeTicks_: SliderTick[];
@@ -732,6 +743,15 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
     const paletteId =
         (event.currentTarget as HTMLElement).dataset['paletteId'];
     this.applyTerminalThemePalette_(paletteId);
+  }
+
+  private async onCleanupInactiveSessionClick_() {
+    const {removedCount} =
+        await this.crtermHandler_.cleanupInactiveTerminalOutputSessions();
+    this.cleanupInactiveSessionToastText_ =
+        await PluralStringProxyImpl.getInstance().getPluralString(
+            'crTermCleanupInactiveSessionToastLabel', removedCount);
+    this.$.cleanupInactiveSessionToast.show();
   }
 
   private applyTerminalThemePalette_(paletteId: string|undefined) {
@@ -1102,11 +1122,6 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
     }
     this.setPrefValue(
         CRTERM_LIMIT_SCROLLBACK_PREF, Number(this.limitScrollback_));
-  }
-
-  private onRestoreTerminalOutputToggleChanged_(event: CustomEvent<boolean>) {
-    this.setPrefValue(
-        'crterm.restore_terminal_output_on_startup', event.detail);
   }
 
   async searchContents(query: string) {

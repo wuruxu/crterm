@@ -14,7 +14,7 @@ import {CrTermProxyImpl} from './crterm_api_proxy.js';
 
 declare var Terminal: any;
 
-const LOG_CRTERM_TRAFFIC = true;
+const LOG_CRTERM_TRAFFIC = false;
 const TERMINAL_RESIZE_DEBOUNCE_MS = 120;
 const SEARCH_REFRESH_DEBOUNCE_MS = 120;
 const HTTPS_LINK_PATTERN = /https:\/\/[^\s<>"'`]+/g;
@@ -46,6 +46,7 @@ export class CrTermAppElement extends CrLitElement {
   private searchScrollListener_: {dispose(): void}|null = null;
   private searchResizeListener_: {dispose(): void}|null = null;
   private restoredOutputLoaded_: boolean = false;
+  private lastPersistedTitle_: string = '';
   private terminalSettings_: {
     termTheme: string,
     fontFamily: string,
@@ -326,8 +327,17 @@ export class CrTermAppElement extends CrLitElement {
     const command = payload.slice(0, separator);
     const value = payload.slice(separator + 1);
     if (command === '0' || command === '2') {
-      document.title = this.formatDocumentTitle_(value);
+      this.setDocumentTitle_(this.formatDocumentTitle_(value));
     }
+  }
+
+  private setDocumentTitle_(title: string) {
+    document.title = title;
+    if (title === this.lastPersistedTitle_) {
+      return;
+    }
+    this.lastPersistedTitle_ = title;
+    this.crtermProxy_.setPageTitle(title);
   }
 
   private formatDocumentTitle_(value: string): string {
@@ -353,7 +363,7 @@ export class CrTermAppElement extends CrLitElement {
       return;
     }
 
-    document.title = match[1];
+    this.setDocumentTitle_(match[1]);
   }
 
   private flushTerminalResize_() {
@@ -412,6 +422,10 @@ export class CrTermAppElement extends CrLitElement {
 
     this.ensureXtermStyles_();
     await this.loadTerminalSettings_();
+    const customTitle = loadTimeData.getString('customTitle').trim();
+    if (customTitle) {
+      this.setDocumentTitle_(customTitle);
+    }
 
     this.term_ = new Terminal({
       convertEol: true,
@@ -508,7 +522,8 @@ export class CrTermAppElement extends CrLitElement {
 
     this.restoredOutputLoaded_ = true;
     try {
-      const {output} = await this.crtermProxy_.getStoredTerminalOutput();
+      const {output, sessionId} =
+          await this.crtermProxy_.getStoredTerminalOutput();
       if (!output.length) {
         return;
       }
@@ -517,7 +532,7 @@ export class CrTermAppElement extends CrLitElement {
         console.log('[crterm] webui restored bytes=', output.length);
       }
       this.handleTerminalOutput_(output, false);
-      this.writeRestoreBanner_();
+      this.writeRestoreBanner_(sessionId);
     } catch (error) {
       console.error('[crterm] failed to load stored terminal output', error);
     }
@@ -551,12 +566,13 @@ export class CrTermAppElement extends CrLitElement {
     this.term_.write(sanitizedOutput, () => this.scheduleSearchRefresh_());
   }
 
-  private writeRestoreBanner_() {
+  private writeRestoreBanner_(sessionId: string) {
     if (!this.term_) {
       return;
     }
 
-    const text = ' restore from session ';
+    const text = sessionId ? ` restore from session ${sessionId} ` :
+                             ' restore from session ';
     const cols = Math.max(this.term_.cols || 0, text.length);
     const leftPadding = Math.max(0, Math.floor((cols - text.length) / 2));
     const rightPadding = Math.max(0, cols - leftPadding - text.length);

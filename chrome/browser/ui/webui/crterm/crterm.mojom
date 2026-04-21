@@ -36,8 +36,15 @@ interface PageHandler {
   OnTerminalResize(uint32 cols, uint32 rows);
 
   // Returns the raw PTY output previously persisted for this tab.
-  GetStoredTerminalOutput() => (array<uint8> output);
+  GetStoredTerminalOutput() => (array<uint8> output, string session_id);
 
   // Returns the current terminal settings from profile prefs.
   GetTerminalSettings() => (TerminalSettings settings);
+
+  // Persists the current page title into the tab's session extra data.
+  SetPageTitle(string title);
+
+  // Deletes persisted terminal output files that do not belong to currently
+  // open crTerm tabs.
+  CleanupInactiveTerminalOutputSessions() => (uint32 removed_count);
 };
