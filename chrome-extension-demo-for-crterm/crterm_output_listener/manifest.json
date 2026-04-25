@@ -1,0 +1,17 @@
+{
+  "name": "CrTerm Output Listener",
+  "description": "Minimal extension that listens to chrome.crterm.onTermOutput and shows recent output.",
+  "version": "0.1",
+  "manifest_version": 3,
+  "permissions": [
+    "crterm",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "CrTerm Output",
+    "default_popup": "popup.html"
+  }
+}

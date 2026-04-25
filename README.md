@@ -27,9 +27,10 @@ crTerm makes terminal sessions feel like Web Browser:
 
 - Use Chrome's powerful tab management for multiple terminal sessions.
 - Customize the terminal with rich theme and appearance settings.
-- Search terminal output with `Ctrl+F` or `Cmd+F`.
-- Open HTTPS links from terminal output in new browser tabs.
-- Restore previous terminal output when restore is enabled.
+- Built-in preview support for images such as PNG, JPG, WEBP, and SVG.
+- Support for referencing file paths directly in the terminal, making AI coding workflows more convenient.
+- Open HTTPS links from terminal in new browser tabs.
+- Restore previous terminal compressed output when restore is enabled.
 - Configure terminal preferences through the browser profile.
 
 ![crTerm terminal tab](gallery/gallery02.png)
@@ -52,6 +53,7 @@ crTerm supports Chrome extensions, making it possible to extend terminal behavio
 
 You can build features around the terminal using familiar browser extension patterns, such as:
 
+- add 'crterm' extension api
 - Project-specific terminal helpers.
 - Workflow automation.
 - Developer tools integration.
