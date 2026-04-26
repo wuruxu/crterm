@@ -16,6 +16,7 @@ crTerm makes the terminal a first-class browser surface:
 - Open terminal as Chrome tab, and move between Windows.
 - Use browser tab group, history, bookmark, and session restore.
 - Click links from terminal output and continue in the crTerm.
+- Built-in image preview and screenshot
 
 crTerm is a browser-native terminal experience backed by native integration.
 
