@@ -3,6 +3,10 @@ import {PageCallbackRouter, PageHandlerFactory, PageHandlerRemote} from './crter
 export interface CrTermProxy {
   onUserInput(input: string): void;
   onTerminalResize(cols: number, rows: number): void;
+  saveCapturedScreenPng(pngBytes: number[]): Promise<{
+    success: boolean,
+    path: string,
+  }>;
   setPageTitle(title: string): void;
   getStoredTerminalOutput(): Promise<{output: number[], sessionId: string}>;
   getTerminalSettings(): Promise<{
@@ -38,6 +42,10 @@ export class CrTermProxyImpl implements CrTermProxy {
 
   onTerminalResize(cols: number, rows: number) {
     this.handler.onTerminalResize(cols, rows);
+  }
+
+  saveCapturedScreenPng(pngBytes: number[]) {
+    return this.handler.saveCapturedScreenPng(pngBytes);
   }
 
   setPageTitle(title: string) {

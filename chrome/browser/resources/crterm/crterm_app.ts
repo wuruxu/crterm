@@ -1,5 +1,7 @@
 import '/strings.m.js';
 
+import 'chrome://resources/cr_elements/cr_button/cr_button.js';
+import 'chrome://resources/cr_elements/cr_dialog/cr_dialog.js';
 import 'chrome://resources/cr_elements/cr_icon_button/cr_icon_button.js';
 import 'chrome://resources/cr_elements/icons.html.js';
 
@@ -13,6 +15,7 @@ import type {CrTermProxy} from './crterm_api_proxy.js';
 import {CrTermProxyImpl} from './crterm_api_proxy.js';
 
 declare var Terminal: any;
+declare var WebglAddon: {WebglAddon: new (preserveDrawingBuffer?: boolean) => any};
 
 const LOG_CRTERM_TRAFFIC = false;
 const TERMINAL_RESIZE_DEBOUNCE_MS = 120;
@@ -22,9 +25,16 @@ const TERMINAL_TITLE_PATTERN = /([a-z_][a-z0-9_-]*@[a-z0-9._-]+)/i;
 
 export interface CrTermAppElement {
   $: {
+    capturePreviewStage: HTMLElement,
     footer: HTMLElement,
   };
   searchInput: HTMLInputElement,
+}
+
+declare global {
+  interface Window {
+    __crtermCaptureScreenFromContextMenu?: () => void;
+  }
 }
 
 export class CrTermAppElement extends CrLitElement {
@@ -53,7 +63,16 @@ export class CrTermAppElement extends CrLitElement {
     fontSize: number,
     scrollback: number,
     restoreTerminalOutputOnStartup: boolean,
+    enableWebgl: boolean,
   }|null = null;
+  private captureCanvas_: HTMLCanvasElement|null = null;
+  private captureSelectionActive_: boolean = false;
+  private captureSelectionStart_: {x: number, y: number}|null = null;
+  private captureSelectionRect_: {x: number, y: number, width: number, height: number}|null = null;
+  private captureSelectionDragMode_: 'create'|'move'|null = null;
+  private captureSelectionDragOffset_: {x: number, y: number}|null = null;
+  private webglAddon_: {dispose(): void}|null = null;
+  private webglRendererAttempted_: boolean = false;
   static get is() {
     return 'crterm-app';
   }
@@ -68,6 +87,10 @@ export class CrTermAppElement extends CrLitElement {
 
   static override get properties() {
     return {
+      captureSelectionVisible_: {type: Boolean},
+      capturePreviewDataUrl_: {type: String},
+      captureSelectionStyle_: {type: String},
+      captureHasSelection_: {type: Boolean},
       root_: {type: String},
       searchVisible_: {type: Boolean},
       searchQuery_: {type: String},
@@ -78,6 +101,10 @@ export class CrTermAppElement extends CrLitElement {
 
   private crtermProxy_: CrTermProxy = CrTermProxyImpl.getInstance();
   private listenerIds_: number[] = [];
+  protected accessor captureSelectionVisible_: boolean = false;
+  protected accessor capturePreviewDataUrl_: string = '';
+  protected accessor captureSelectionStyle_: string = '';
+  protected accessor captureHasSelection_: boolean = false;
   protected accessor root_: string = "";
   protected accessor searchVisible_: boolean = false;
   protected accessor searchQuery_: string = '';
@@ -171,7 +198,14 @@ export class CrTermAppElement extends CrLitElement {
   private async loadTerminalSettings_() {
     try {
       const {settings} = await this.crtermProxy_.getTerminalSettings();
-      this.terminalSettings_ = settings;
+      this.terminalSettings_ = {
+        termTheme: settings.termTheme,
+        fontFamily: settings.fontFamily,
+        fontSize: settings.fontSize,
+        scrollback: settings.scrollback,
+        restoreTerminalOutputOnStartup: settings.restoreTerminalOutputOnStartup,
+        enableWebgl: (settings as any).enableWebgl ?? true,
+      };
     } catch (error) {
       console.error('[crterm] failed to load terminal settings', error);
     }
@@ -414,6 +448,156 @@ export class CrTermAppElement extends CrLitElement {
     this.scheduleBackendResize_(cols, rows);
   }
 
+  private logWebglState_(message: string, details: object = {}) {
+    console.log(`[crterm] ${message} ${JSON.stringify(details)}`);
+  }
+
+  private probeWebgl2Support_(): boolean {
+    const hasAddon = typeof WebglAddon !== 'undefined';
+    const hasWebgl2Constructor = typeof WebGL2RenderingContext !== 'undefined';
+    const canvas = document.createElement('canvas');
+
+    let gl: WebGL2RenderingContext|null = null;
+    let contextError = '';
+    try {
+      gl = canvas.getContext('webgl2');
+    } catch (error) {
+      contextError = String(error);
+    }
+
+    let vendor = '';
+    let renderer = '';
+    if (gl) {
+      const debugInfo =
+          gl.getExtension('WEBGL_debug_renderer_info') as {
+            UNMASKED_VENDOR_WEBGL: number,
+            UNMASKED_RENDERER_WEBGL: number,
+          } | null;
+      if (debugInfo) {
+        vendor = String(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '');
+        renderer =
+            String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '');
+      }
+    }
+
+    const supported = hasAddon && hasWebgl2Constructor && !!gl;
+    this.logWebglState_('xterm WebGL2 probe', {
+      hasAddon,
+      hasWebgl2Constructor,
+      contextCreated: !!gl,
+      supported,
+      vendor,
+      renderer,
+      contextError,
+    });
+    return supported;
+  }
+
+  private patchWebglRendererForShadowDom_(webglAddon: any) {
+    const renderer = webglAddon?._renderer;
+    const screenElement = renderer?._core?.screenElement as HTMLElement | undefined;
+    if (!renderer || !screenElement || typeof renderer.renderRows !== 'function') {
+      return;
+    }
+
+    renderer._isAttached = !!screenElement.isConnected;
+    const originalRenderRows = renderer.renderRows.bind(renderer);
+    renderer.renderRows = (...args: unknown[]) => {
+      if (!renderer._isAttached &&
+          screenElement.isConnected &&
+          renderer._charSizeService?.width &&
+          renderer._charSizeService?.height) {
+        renderer._isAttached = true;
+      }
+      return originalRenderRows(...args);
+    };
+
+    this.logWebglState_('xterm WebGL2 shadow-dom patch applied', {
+      isConnected: screenElement.isConnected,
+      hasRenderRows: true,
+    });
+  }
+
+  private isWebglEnabled_(): boolean {
+    if (this.terminalSettings_ !== null) {
+      return this.terminalSettings_.enableWebgl;
+    }
+    return loadTimeData.getBoolean('enableWebgl');
+  }
+
+  private maybeEnableWebglRenderer_(terminal: HTMLElement) {
+    if (!this.term_ || this.webglRendererAttempted_ || this.webglAddon_) {
+      return;
+    }
+
+    if (!this.isWebglEnabled_()) {
+      this.webglRendererAttempted_ = true;
+      console.log('[crterm] xterm WebGL2 renderer disabled by settings');
+      return;
+    }
+
+    const width = terminal.clientWidth;
+    const height = terminal.clientHeight;
+    if (width <= 0 || height <= 0) {
+      this.logWebglState_('xterm WebGL2 waiting for terminal size', {
+        width,
+        height,
+      });
+      return;
+    }
+
+    if (!this.probeWebgl2Support_()) {
+      this.webglRendererAttempted_ = true;
+      console.warn('[crterm] xterm WebGL2 renderer not enabled');
+      return;
+    }
+
+    try {
+      const webglAddon = new WebglAddon.WebglAddon();
+      if (typeof webglAddon.onContextLoss === 'function') {
+        webglAddon.onContextLoss(() => {
+          console.warn('[crterm] xterm WebGL2 context lost, disposing addon');
+          webglAddon.dispose();
+          this.webglAddon_ = null;
+        });
+      }
+      this.webglRendererAttempted_ = true;
+      this.webglAddon_ = webglAddon;
+      this.term_.loadAddon(webglAddon);
+      this.patchWebglRendererForShadowDom_(webglAddon);
+      requestAnimationFrame(() => {
+        this.fitTerminal_();
+        this.term_?.refresh?.(0, Math.max(0, (this.term_?.rows ?? 1) - 1));
+        const canvases = Array.from(
+            this.term_?.element?.querySelectorAll?.('canvas') ?? [],
+            canvas => canvas as HTMLCanvasElement);
+        const canvasInfo = canvases.map((canvas: HTMLCanvasElement) => ({
+          width: canvas.width,
+          height: canvas.height,
+          clientWidth: canvas.clientWidth,
+          clientHeight: canvas.clientHeight,
+        }));
+        const rendererType =
+            this.term_?._core?._renderService?._renderer?.value?.constructor
+                ?.name ??
+            this.term_?._core?._renderService?._renderer?.constructor?.name ??
+            '';
+        this.logWebglState_('xterm WebGL2 renderer enabled', {
+          width,
+          height,
+          cols: this.term_?.cols ?? 0,
+          rows: this.term_?.rows ?? 0,
+          canvasCount: canvases.length,
+          canvasInfo,
+          rendererType,
+        });
+      });
+    } catch (error) {
+      this.webglRendererAttempted_ = true;
+      console.warn('[crterm] failed to enable xterm WebGL2 renderer', error);
+    }
+  }
+
   override async firstUpdated() {
     const terminal = this.shadowRoot?.getElementById('terminal');
     if (!terminal || typeof Terminal === 'undefined') {
@@ -445,6 +629,8 @@ export class CrTermAppElement extends CrLitElement {
     this.term_.open(terminal);
     this.term_.focus();
     requestAnimationFrame(() => {
+      this.fitTerminal_();
+      this.maybeEnableWebglRenderer_(terminal);
       void this.initializeTerminalSession_();
     });
     this.searchRenderListener_ =
@@ -453,12 +639,18 @@ export class CrTermAppElement extends CrLitElement {
         this.term_.onScroll(() => this.updateSearchHighlightOverlay_());
     this.searchResizeListener_ =
         this.term_.onResize(() => this.updateSearchHighlightOverlay_());
-    this.resizeObserver_ = new ResizeObserver(() => this.fitTerminal_());
+    this.resizeObserver_ = new ResizeObserver(() => {
+      this.fitTerminal_();
+      this.maybeEnableWebglRenderer_(terminal);
+    });
     this.resizeObserver_.observe(terminal);
     //this.term_.write('Hello from \\x1B[1;3;31mxterm.js\\x1B[0m\\r\\n$ ');
     this.term_.onData((input: string) => this.onUserInput_(input));
     this.keydownListener_ = (event: KeyboardEvent) => this.onKeyDown_(event);
     document.addEventListener('keydown', this.keydownListener_, true);
+    window.__crtermCaptureScreenFromContextMenu = () => {
+      void this.captureScreenFromContextMenu_();
+    };
   }
 
   override connectedCallback() {
@@ -487,6 +679,8 @@ export class CrTermAppElement extends CrLitElement {
     }
     this.pendingBackendCols_ = null;
     this.pendingBackendRows_ = null;
+    this.webglAddon_ = null;
+    this.webglRendererAttempted_ = false;
     if (this.keydownListener_) {
       document.removeEventListener('keydown', this.keydownListener_, true);
       this.keydownListener_ = null;
@@ -504,6 +698,9 @@ export class CrTermAppElement extends CrLitElement {
       this.term_.dispose();
       this.term_ = null;
     }
+    if (window.__crtermCaptureScreenFromContextMenu) {
+      delete window.__crtermCaptureScreenFromContextMenu;
+    }
     super.disconnectedCallback();
   }
 
@@ -512,6 +709,323 @@ export class CrTermAppElement extends CrLitElement {
       console.log('[crterm] webui onUserInput=', JSON.stringify(input));
     }
     this.crtermProxy_.onUserInput(input);
+  }
+
+  //private shouldPreserveTerminalSelectionForKeyEvent_(
+  //    event: KeyboardEvent): boolean {
+  //  if (event.defaultPrevented || event.isComposing) {
+  //    return false;
+  //  }
+
+  //  if (event.ctrlKey || event.metaKey || event.altKey) {
+  //    return false;
+  //  }
+
+  //  return event.key.length === 1;
+  //}
+
+  //private maybePreserveTerminalSelectionBeforeInput_(event: KeyboardEvent) {
+  //  if (!this.term_?.hasSelection?.() ||
+  //      !this.shouldPreserveTerminalSelectionForKeyEvent_(event)) {
+  //    return;
+  //  }
+
+  //  const selection = this.term_.getSelectionPosition?.();
+  //  if (!selection?.start || !selection?.end) {
+  //    return;
+  //  }
+
+  //  this.pendingTerminalSelectionRestore_ = {
+  //    start: {x: selection.start.x, y: selection.start.y},
+  //    end: {x: selection.end.x, y: selection.end.y},
+  //  };
+  //}
+
+  //private scheduleTerminalSelectionRestore_() {
+  //  if (!this.pendingTerminalSelectionRestore_) {
+  //    return;
+  //  }
+
+  //  if (this.selectionRestoreTimeoutId_ !== null) {
+  //    window.clearTimeout(this.selectionRestoreTimeoutId_);
+  //  }
+
+  //  this.selectionRestoreTimeoutId_ = window.setTimeout(() => {
+  //    this.selectionRestoreTimeoutId_ = null;
+  //    this.restorePendingTerminalSelection_();
+  //  }, CrTermAppElement.TERMINAL_SELECTION_RESTORE_DELAY_MS);
+  //}
+
+  //private restorePendingTerminalSelection_() {
+  //  const selection = this.pendingTerminalSelectionRestore_;
+  //  this.pendingTerminalSelectionRestore_ = null;
+  //  if (!selection || !this.term_?.select) {
+  //    return;
+  //  }
+
+  //  const length = (selection.end.y - selection.start.y) * this.term_.cols +
+  //      selection.end.x - selection.start.x;
+  //  if (length <= 0) {
+  //    return;
+  //  }
+
+  //  this.term_.select(selection.start.x, selection.start.y, length);
+  //}
+
+  protected closeCaptureSelection_() {
+    this.captureSelectionVisible_ = false;
+    this.capturePreviewDataUrl_ = '';
+    this.captureSelectionStyle_ = '';
+    this.captureHasSelection_ = false;
+    this.captureCanvas_ = null;
+    this.captureSelectionRect_ = null;
+    this.captureSelectionStart_ = null;
+    this.captureSelectionActive_ = false;
+    this.captureSelectionDragMode_ = null;
+    this.captureSelectionDragOffset_ = null;
+    this.term_?.focus();
+  }
+
+  private async captureScreenFromContextMenu_() {
+    let stream: MediaStream|null = null;
+    try {
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+      const track = stream.getVideoTracks()[0];
+      if (!track) {
+        return;
+      }
+
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.muted = true;
+      await video.play();
+      await new Promise<void>((resolve) => {
+        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          resolve();
+          return;
+        }
+        video.onloadeddata = () => resolve();
+      });
+
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      if (!width || !height) {
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        return;
+      }
+
+      context.drawImage(video, 0, 0, width, height);
+      this.captureCanvas_ = canvas;
+      this.capturePreviewDataUrl_ = canvas.toDataURL('image/png');
+      this.captureSelectionVisible_ = true;
+      this.captureSelectionStyle_ = '';
+      this.captureHasSelection_ = false;
+      this.captureSelectionRect_ = null;
+      this.captureSelectionStart_ = null;
+      this.captureSelectionActive_ = false;
+      this.captureSelectionDragMode_ = null;
+      this.captureSelectionDragOffset_ = null;
+    } catch (error) {
+      console.error('[crterm] failed to capture screen', error);
+      this.term_?.focus();
+    } finally {
+      stream?.getTracks().forEach(track => track.stop());
+    }
+  }
+
+  private getCapturePreviewPoint_(event: PointerEvent): {x: number, y: number}|null {
+    const stage = this.shadowRoot?.getElementById('capturePreviewStage');
+    if (!stage) {
+      return null;
+    }
+
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      return null;
+    }
+
+    const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+    const y = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+    return {x, y};
+  }
+
+  private setCapturePreviewCursor_(cursor: 'crosshair'|'move') {
+    const stage = this.shadowRoot?.getElementById('capturePreviewStage');
+    if (stage instanceof HTMLElement) {
+      stage.style.cursor = cursor;
+    }
+  }
+
+  private updateCaptureSelectionFromPoints_(
+      start: {x: number, y: number},
+      end: {x: number, y: number}) {
+    const x = Math.min(start.x, end.x);
+    const y = Math.min(start.y, end.y);
+    const width = Math.abs(end.x - start.x);
+    const height = Math.abs(end.y - start.y);
+    this.captureSelectionRect_ = {x, y, width, height};
+    this.captureHasSelection_ = width >= 4 && height >= 4;
+    this.captureSelectionStyle_ =
+        `left:${x}px;top:${y}px;width:${width}px;height:${height}px;`;
+  }
+
+  protected beginCaptureSelection_(event: PointerEvent) {
+    if (!this.captureSelectionVisible_) {
+      return;
+    }
+
+    const point = this.getCapturePreviewPoint_(event);
+    if (!point) {
+      return;
+    }
+
+    const target = event.composedPath()[0];
+    const clickedSelectionBox =
+        target instanceof HTMLElement &&
+        target.classList.contains('capture-selection-box');
+    if (clickedSelectionBox && this.captureSelectionRect_ &&
+        this.captureHasSelection_) {
+      this.captureSelectionActive_ = true;
+      this.captureSelectionDragMode_ = 'move';
+      this.captureSelectionDragOffset_ = {
+        x: point.x - this.captureSelectionRect_.x,
+        y: point.y - this.captureSelectionRect_.y,
+      };
+      this.setCapturePreviewCursor_('move');
+      (event.currentTarget as HTMLElement | null)?.setPointerCapture?.(
+          event.pointerId);
+      return;
+    }
+
+    this.captureSelectionActive_ = true;
+    this.captureSelectionDragMode_ = 'create';
+    this.captureSelectionStart_ = point;
+    this.captureSelectionDragOffset_ = null;
+    this.setCapturePreviewCursor_('crosshair');
+    this.updateCaptureSelectionFromPoints_(point, point);
+    (event.currentTarget as HTMLElement | null)?.setPointerCapture?.(
+        event.pointerId);
+  }
+
+  protected updateCaptureSelection_(event: PointerEvent) {
+    if (!this.captureSelectionActive_) {
+      return;
+    }
+
+    const point = this.getCapturePreviewPoint_(event);
+    if (!point) {
+      return;
+    }
+
+    if (this.captureSelectionDragMode_ === 'move' && this.captureSelectionRect_ &&
+        this.captureSelectionDragOffset_) {
+      const stage = this.shadowRoot?.getElementById('capturePreviewStage');
+      if (!stage) {
+        return;
+      }
+      const width = this.captureSelectionRect_.width;
+      const height = this.captureSelectionRect_.height;
+      const x = Math.max(
+          0, Math.min(stage.clientWidth - width,
+                      point.x - this.captureSelectionDragOffset_.x));
+      const y = Math.max(
+          0, Math.min(stage.clientHeight - height,
+                      point.y - this.captureSelectionDragOffset_.y));
+      this.captureSelectionRect_ = {x, y, width, height};
+      this.captureSelectionStyle_ =
+          `left:${x}px;top:${y}px;width:${width}px;height:${height}px;`;
+      return;
+    }
+
+    if (!this.captureSelectionStart_) {
+      return;
+    }
+    this.updateCaptureSelectionFromPoints_(this.captureSelectionStart_, point);
+  }
+
+  protected endCaptureSelection_(event: PointerEvent) {
+    if (!this.captureSelectionActive_) {
+      return;
+    }
+
+    const resolvedPoint =
+        this.getCapturePreviewPoint_(event) || this.captureSelectionStart_;
+    this.captureSelectionActive_ = false;
+    if (this.captureSelectionDragMode_ === 'create' &&
+        this.captureSelectionStart_ && resolvedPoint) {
+      this.updateCaptureSelectionFromPoints_(
+          this.captureSelectionStart_, resolvedPoint);
+    }
+    this.captureSelectionStart_ = null;
+    this.captureSelectionDragMode_ = null;
+    this.captureSelectionDragOffset_ = null;
+    this.setCapturePreviewCursor_('crosshair');
+    (event.currentTarget as HTMLElement | null)?.releasePointerCapture?.(
+        event.pointerId);
+  }
+
+  protected async saveCaptureSelection_() {
+    if (!this.captureCanvas_ || !this.captureSelectionRect_ ||
+        !this.captureHasSelection_) {
+      return;
+    }
+
+    const stage = this.shadowRoot?.getElementById('capturePreviewStage');
+    if (!stage || !stage.clientWidth || !stage.clientHeight) {
+      this.closeCaptureSelection_();
+      return;
+    }
+
+    const scaleX = this.captureCanvas_.width / stage.clientWidth;
+    const scaleY = this.captureCanvas_.height / stage.clientHeight;
+    const sourceX = Math.max(0, Math.floor(this.captureSelectionRect_.x * scaleX));
+    const sourceY = Math.max(0, Math.floor(this.captureSelectionRect_.y * scaleY));
+    const sourceWidth = Math.min(
+        this.captureCanvas_.width - sourceX,
+        Math.max(1, Math.floor(this.captureSelectionRect_.width * scaleX)));
+    const sourceHeight = Math.min(
+        this.captureCanvas_.height - sourceY,
+        Math.max(1, Math.floor(this.captureSelectionRect_.height * scaleY)));
+
+    const croppedCanvas = document.createElement('canvas');
+    croppedCanvas.width = sourceWidth;
+    croppedCanvas.height = sourceHeight;
+    const context = croppedCanvas.getContext('2d');
+    if (!context) {
+      this.closeCaptureSelection_();
+      return;
+    }
+
+    context.drawImage(
+        this.captureCanvas_, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0,
+        sourceWidth, sourceHeight);
+    const blob = await new Promise<Blob|null>((resolve) => {
+      croppedCanvas.toBlob(resolve, 'image/png');
+    });
+    if (!blob) {
+      this.closeCaptureSelection_();
+      return;
+    }
+
+    const buffer = await blob.arrayBuffer();
+    const {success} = await this.crtermProxy_.saveCapturedScreenPng(
+        Array.from(new Uint8Array(buffer)));
+    if (!success) {
+      this.closeCaptureSelection_();
+      return;
+    }
+
+    this.closeCaptureSelection_();
   }
 
   private async loadStoredTerminalOutput_() {

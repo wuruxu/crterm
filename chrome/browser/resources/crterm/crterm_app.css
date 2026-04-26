@@ -4,6 +4,7 @@
 
 /* #css_wrapper_metadata_start
  * #type=style-lit
+ * #import=chrome://resources/cr_elements/cr_shared_vars.css.js
  * #scheme=relative
  * #css_wrapper_metadata_end */
 
@@ -13,7 +14,39 @@
   height: 100%;
   width: 100%;
   min-height: 100%;
-  background: #111;
+  color: var(--color-sys-on-surface);
+  background: var(--color-sys-surface1);
+  color-scheme: light dark;
+
+  /* Light mode: match Chromium WebUI scrollbar (google-grey-500 / grey-600) */
+  --crterm-scrollbar-track-color: rgba(0, 0, 0, 0.05);
+  --crterm-scrollbar-thumb-color: var(--google-grey-500);
+  --crterm-scrollbar-thumb-hover-color: var(--google-grey-600);
+
+  /* Light mode: search highlight — visible on both light and dark terminal backgrounds */
+  --crterm-search-hl-bg: rgba(255, 196, 0, 0.38);
+  --crterm-search-hl-border: rgba(180, 140, 0, 0.75);
+  --crterm-search-hl-current-bg: rgba(255, 120, 0, 0.55);
+  --crterm-search-hl-current-border: rgba(180, 70, 0, 0.88);
+  --crterm-search-marker-bg: rgba(214, 176, 0, 0.98);
+  --crterm-search-marker-current-bg: rgba(230, 138, 0, 0.98);
+}
+
+@media (prefers-color-scheme: dark) {
+  :host {
+    /* Dark mode: match Chromium WebUI scrollbar (google-grey-300 / grey-400) */
+    --crterm-scrollbar-track-color: rgba(255, 255, 255, 0.06);
+    --crterm-scrollbar-thumb-color: var(--google-grey-300);
+    --crterm-scrollbar-thumb-hover-color: var(--google-grey-400);
+
+    /* Dark mode: more saturated highlights on dark terminal backgrounds */
+    --crterm-search-hl-bg: rgba(255, 210, 0, 0.52);
+    --crterm-search-hl-border: rgba(200, 160, 0, 0.90);
+    --crterm-search-hl-current-bg: rgba(255, 140, 0, 0.72);
+    --crterm-search-hl-current-border: rgba(200, 90, 0, 0.96);
+    --crterm-search-marker-bg: rgba(230, 190, 0, 0.98);
+    --crterm-search-marker-current-bg: rgba(255, 150, 0, 0.98);
+  }
 }
 
 #terminal {
@@ -39,10 +72,10 @@
 
 .search-box {
   align-items: center;
-  background: rgba(20, 20, 20, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--color-sys-surface3);
+  border: 1px solid var(--color-sys-tonal-outline);
   border-radius: 10px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--cr-elevation-2);
   display: flex;
   gap: 8px;
   padding: 10px;
@@ -52,57 +85,107 @@
   z-index: 20;
 }
 
-.search-input {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+.capture-dialog {
+  --cr-dialog-background-color: var(--color-sys-surface1);
+  --cr-dialog-body-padding-horizontal: 6px;
+  --cr-dialog-button-container-padding-bottom: 8px;
+  --cr-dialog-button-container-padding-horizontal: 18px;
+  --cr-dialog-button-container-padding-top: 8px;
+  --cr-dialog-border-radius: 12px;
+  --cr-dialog-top-container-min-height: 0px;
+  --cr-dialog-width: fit-content;
+}
+
+.capture-dialog::part(body-container) {
+  max-height: calc(100vh - 160px);
+}
+
+.capture-dialog-body {
+  padding: 6px;
+}
+
+.capture-preview-stage {
+  background: var(--color-sys-surface1);
+  border: 1px solid var(--color-sys-tonal-outline);
   border-radius: 8px;
-  color: #f5f5f5;
+  cursor: crosshair;
+  margin-top: 0;
+  max-height: calc(100vh - 172px);
+  max-width: calc(100vw - 12px);
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  width: auto;
+}
+
+.capture-preview-image {
+  display: block;
+  max-height: calc(100vh - 172px);
+  max-width: calc(100vw - 12px);
+  user-select: none;
+}
+
+.capture-selection-box {
+  background: rgba(94, 168, 255, 0.18);
+  border: 1px solid rgba(94, 168, 255, 0.92);
+  box-shadow: 0 0 0 99999px rgba(0, 0, 0, 0.36);
+  cursor: move;
+  pointer-events: auto;
+  position: absolute;
+  z-index: 1;
+}
+
+.search-input {
+  background: var(--color-sys-surface1);
+  border: 1px solid var(--color-sys-tonal-outline);
+  border-radius: 8px;
+  color: var(--color-sys-on-surface);
   min-width: 220px;
   outline: none;
   padding: 8px 10px;
 }
 
 .search-input:focus {
-  border-color: rgba(117, 181, 255, 0.7);
+  border-color: var(--color-sys-primary);
 }
 
 .search-count {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-sys-on-surface-variant);
   font-size: 12px;
   min-width: 52px;
   text-align: center;
 }
 
 .search-icon-button {
-  --cr-icon-button-fill-color: #f5f5f5;
-  --cr-icon-button-hover-background-color: rgba(255, 255, 255, 0.14);
+  --cr-icon-button-fill-color: var(--color-sys-on-surface);
+  --cr-icon-button-hover-background-color: var(--cr-hover-background-color);
   --cr-icon-button-icon-size: 20px;
   --cr-icon-button-margin-end: 0;
   --cr-icon-button-margin-start: 0;
   --cr-icon-button-size: 32px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--color-sys-surface1);
+  border: 1px solid var(--color-sys-tonal-outline);
   border-radius: 8px;
-  color: #f5f5f5;
+  color: var(--color-sys-on-surface);
 }
 
 .search-icon-button:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--cr-hover-background-color);
 }
 
 .search-highlight {
-  background: rgba(214, 176, 0, 0.82);
+  background: var(--crterm-search-hl-bg);
   border-radius: 2px;
-  box-shadow: inset 0 0 0 1px rgba(160, 120, 0, 0.92);
-  mix-blend-mode: screen;
+  box-shadow: inset 0 0 0 1px var(--crterm-search-hl-border);
   pointer-events: none;
   position: absolute;
   z-index: 6;
 }
 
 .search-highlight.current {
-  background: rgba(230, 138, 0, 0.88);
-  box-shadow: inset 0 0 0 1px rgba(176, 84, 0, 0.96);
+  background: var(--crterm-search-hl-current-bg);
+  box-shadow: inset 0 0 0 1px var(--crterm-search-hl-current-border);
 }
 
 .search-marker-layer {
@@ -116,7 +199,7 @@
 }
 
 .search-marker {
-  background: rgba(214, 176, 0, 0.98);
+  background: var(--crterm-search-marker-bg);
   border-radius: 999px;
   left: 2px;
   min-height: 2px;
@@ -125,25 +208,25 @@
 }
 
 .search-marker.current {
-  background: rgba(230, 138, 0, 0.98);
+  background: var(--crterm-search-marker-current-bg);
 }
 
 #terminal .xterm .xterm-scrollable-element > .scrollbar.vertical {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--crterm-scrollbar-track-color);
   border-radius: 999px;
   width: 12px !important;
   right: 0 !important;
 }
 
 #terminal .xterm .xterm-scrollable-element > .scrollbar.horizontal {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--crterm-scrollbar-track-color);
   border-radius: 999px;
   height: 12px !important;
   bottom: 0 !important;
 }
 
 #terminal .xterm .xterm-scrollable-element > .scrollbar > .slider {
-  background: rgba(230, 230, 230, 0.78) !important;
+  background: var(--crterm-scrollbar-thumb-color) !important;
   border-radius: 999px;
 }
 
@@ -156,5 +239,5 @@
 }
 
 #terminal .xterm .xterm-scrollable-element > .scrollbar > .slider:hover {
-  background: rgba(240, 240, 240, 0.9) !important;
+  background: var(--crterm-scrollbar-thumb-hover-color) !important;
 }

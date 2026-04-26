@@ -448,8 +448,8 @@ cr-button {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 14px;
   letter-spacing: 0.05em;
-  margin: 18px 2px 0;
-  padding: 4px 2px;
+  margin: 0;
+  padding: 0;
   position: relative;
   transition: color 180ms ease, filter 180ms ease, text-shadow 180ms ease,
       transform 180ms ease;
@@ -485,6 +485,38 @@ cr-button {
       drop-shadow(0 0 6px rgba(98, 255, 173, 0.18))
       drop-shadow(0 0 12px rgba(98, 255, 173, 0.12));
   transform: translateY(-1px) scale(1.03);
+}
+
+.bottom-bar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding: 4px 2px;
+}
+
+.github-link {
+  color: rgba(146, 255, 198, 0.52);
+  display: flex;
+  opacity: 0.72;
+  transition: color 180ms ease, filter 180ms ease, opacity 180ms ease,
+      transform 180ms ease;
+}
+
+.github-link:hover {
+  color: #7fff9f;
+  filter:
+      drop-shadow(0 0 6px rgba(98, 255, 173, 0.28))
+      drop-shadow(0 0 14px rgba(98, 255, 173, 0.16));
+  opacity: 1;
+  transform: translateY(-2px) scale(1.08);
+}
+
+.github-icon {
+  display: block;
+  fill: currentColor;
+  height: 28px;
+  width: 28px;
 }
 
 @media (max-width: 640px) {

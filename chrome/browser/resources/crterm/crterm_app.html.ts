@@ -1,9 +1,48 @@
+import {loadTimeData} from 'chrome://resources/js/load_time_data.js';
 import {html} from '//resources/lit/v3_0/lit.rollup.js';
 import type {CrTermAppElement} from './crterm_app.js';
 
 export function getHtml(this: CrTermAppElement) {
   return html`<!--_html_template_start_-->
 <div class="terminal-shell">
+  ${this.captureSelectionVisible_ ? html`
+    <cr-dialog
+        class="capture-dialog"
+        consume-keydown-event
+        no-cancel
+        show-on-attach
+        @cancel="${this.closeCaptureSelection_}"
+        @close="${this.closeCaptureSelection_}">
+      <div slot="body" class="capture-dialog-body">
+        <div
+            id="capturePreviewStage"
+            class="capture-preview-stage"
+            @pointerdown="${this.beginCaptureSelection_}"
+            @pointermove="${this.updateCaptureSelection_}"
+            @pointerup="${this.endCaptureSelection_}"
+            @pointerleave="${this.endCaptureSelection_}">
+          <img
+              class="capture-preview-image"
+              src="${this.capturePreviewDataUrl_}"
+              alt="Captured screen preview"
+              draggable="false">
+          ${this.captureSelectionStyle_ ? html`
+            <div class="capture-selection-box"
+                style="${this.captureSelectionStyle_}"></div>` : ''}
+        </div>
+      </div>
+      <div slot="button-container">
+        <cr-button class="cancel-button" @click="${this.closeCaptureSelection_}">
+          ${loadTimeData.getString('cancelLabel')}
+        </cr-button>
+        <cr-button
+            class="action-button"
+            ?disabled="${!this.captureHasSelection_}"
+            @click="${this.saveCaptureSelection_}">
+          ${loadTimeData.getString('okLabel')}
+        </cr-button>
+      </div>
+    </cr-dialog>` : ''}
   ${this.searchVisible_ ? html`
     <div class="search-box" role="search">
       <input

@@ -188,7 +188,7 @@ cat > "${PKG_ROOT}/usr/share/applications/${PKG_NAME}.desktop" <<EOF
 Version=${VERSION}
 Type=Application
 Name=${APP_NAME}
-Comment=Chromium-based Terminal
+Comment=an AI-era terminal app
 Exec=${PKG_NAME} %U
 Icon=${PKG_NAME}
 Terminal=false

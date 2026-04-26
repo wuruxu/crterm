@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="light dark">
   <base href="chrome://crterm/">
   <title>$i18n{title}</title>
   <link rel="stylesheet" href="crterm_xterm.css">
@@ -15,11 +15,19 @@
       background: #111;
     }
 
+    @media (prefers-color-scheme: light) {
+      html,
+      body {
+        background: #fff;
+      }
+    }
+
     body {
       display: flex;
     }
   </style>
   <script src="crterm_xterm.js"></script>
+  <script src="crterm_xterm_webgl.js"></script>
 </head>
 <body>
   <crterm-app></crterm-app>

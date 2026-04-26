@@ -2,5 +2,6 @@
 <grit-part>
   <include name="IDR_CRTERM_UI_CSS" file="../webui/crterm/resources/xterm.css" preprocess="true" type="BINDATA" compress="brotli" />
   <include name="IDR_CRTERM_UI_JS" file="../webui/crterm/resources/xterm.js" preprocess="true" type="BINDATA" compress="brotli" />
+  <include name="IDR_CRTERM_UI_WEBGL_ADDON_JS" file="../webui/crterm/resources/xterm-addon-webgl.js" preprocess="true" type="BINDATA" compress="brotli" />
   <include name="IDR_CRTERM_LOGO_SVG" file="../webui/crterm/resources/crterm-logo.svg" preprocess="true" type="BINDATA" compress="brotli" />
 </grit-part>

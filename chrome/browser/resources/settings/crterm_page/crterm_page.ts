@@ -16,6 +16,7 @@ import {FontsBrowserProxyImpl} from '/shared/settings/appearance_page/fonts_brow
 import {PrefsMixin} from '/shared/settings/prefs/prefs_mixin.js';
 import type {CrToastElement} from 'chrome://resources/cr_elements/cr_toast/cr_toast.js';
 import type {SliderTick} from 'chrome://resources/cr_elements/cr_slider/cr_slider.js';
+import {loadTimeData} from 'chrome://resources/js/load_time_data.js';
 import {PluralStringProxyImpl} from 'chrome://resources/js/plural_string_proxy.js';
 import {getTrustedScriptURL} from 'chrome://resources/js/static_types.js';
 import {PolymerElement} from 'chrome://resources/polymer/v3_0/polymer/polymer_bundled.min.js';
@@ -550,6 +551,14 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
         type: String,
         value: '/usr/bin/bash',
       },
+      webglSystemAvailable_: {
+        type: Boolean,
+        value: false,
+      },
+      webglSubLabel_: {
+        type: String,
+        computed: 'getWebGLSubLabel_(webglSystemAvailable_)',
+      },
       cleanupInactiveSessionToastText_: String,
       fontFamilyOptions_: {
         type: Array,
@@ -593,7 +602,8 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
           'prefs.crterm.font_size.value, ' +
           'prefs.crterm.limit_scrollback.value, ' +
           'prefs.crterm.restore_terminal_output_on_startup.value, ' +
-          'prefs.crterm.close_button_visible.value)',
+          'prefs.crterm.close_button_visible.value, ' +
+          'prefs.crterm.enable_webgl.value)',
     ];
   }
 
@@ -614,6 +624,8 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
   private terminalPreviewDataListener_: {dispose(): void}|null = null;
   declare private cleanupInactiveSessionToastText_: string;
   declare private defaultShell_: string;
+  declare private webglSystemAvailable_: boolean;
+  declare private webglSubLabel_: string;
   declare private fontFamilyOptions_: DropdownMenuOptionList;
   declare private fontSizeTicks_: SliderTick[];
   declare private limitScrollback_: string;
@@ -635,6 +647,23 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
     this.initializeTerminalPreviewSession_();
     this.installColorSchemeListener_();
     void this.resetTerminalFontPreview_();
+    this.initWebglSystemAvailability_();
+  }
+
+  private initWebglSystemAvailability_() {
+    try {
+      const canvas = document.createElement('canvas');
+      this.webglSystemAvailable_ = !!canvas.getContext('webgl2');
+    } catch {
+      this.webglSystemAvailable_ = false;
+    }
+  }
+
+  private getWebGLSubLabel_(): string {
+    const baseDesc = loadTimeData.getString('crTermEnableWebGLDescription');
+    const systemStatus = this.webglSystemAvailable_ ?
+        '(system: supported)' : '(system: not supported)';
+    return `${baseDesc} ${systemStatus}`;
   }
 
   override disconnectedCallback() {
@@ -677,7 +706,8 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
       fontSize: number|string|undefined,
       limitScrollback: number|string|undefined,
       _restoreTerminalOutputOnStartup: boolean|undefined,
-      _closeButtonVisible: boolean|undefined) {
+      _closeButtonVisible: boolean|undefined,
+      _enableWebgl: boolean|undefined) {
     if (typeof termTheme === 'string') {
       this.termTheme_ = termTheme || DEFAULT_CRTERM_THEME;
       this.updateSelectedTerminalTheme_();

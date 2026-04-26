@@ -11,6 +11,7 @@ struct TerminalSettings {
   uint32 font_size;
   uint32 scrollback;
   bool restore_terminal_output_on_startup;
+  bool enable_webgl;
 };
 
 // Used by the WebUI page to bootstrap bidirectional communication.
@@ -31,6 +32,9 @@ interface Page {
 interface PageHandler {
   // Called by the backend to send output to the terminal.
   OnUserInput(string input);
+
+  // Saves a captured PNG image and writes the saved file path into terminal.
+  SaveCapturedScreenPng(array<uint8> png_bytes) => (bool success, string path);
 
   // Updates the backing PTY window size.
   OnTerminalResize(uint32 cols, uint32 rows);
