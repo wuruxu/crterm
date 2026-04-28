@@ -64,6 +64,7 @@ export class CrTermAppElement extends CrLitElement {
     scrollback: number,
     restoreTerminalOutputOnStartup: boolean,
     enableWebgl: boolean,
+    wordSeparator: string,
   }|null = null;
   private captureCanvas_: HTMLCanvasElement|null = null;
   private captureSelectionActive_: boolean = false;
@@ -124,6 +125,13 @@ export class CrTermAppElement extends CrLitElement {
     }
     const configuredScrollback = loadTimeData.getInteger('scrollback');
     return configuredScrollback > 0 ? configuredScrollback : 10240;
+  }
+
+  private getConfiguredWordSeparator_(): string {
+    if (this.terminalSettings_) {
+      return this.terminalSettings_.wordSeparator;
+    }
+    return loadTimeData.getString('wordSeparator') || " ()[]{}\\'\"`,:;";
   }
 
   private getConfiguredFontFamily_(): string {
@@ -204,7 +212,8 @@ export class CrTermAppElement extends CrLitElement {
         fontSize: settings.fontSize,
         scrollback: settings.scrollback,
         restoreTerminalOutputOnStartup: settings.restoreTerminalOutputOnStartup,
-        enableWebgl: (settings as any).enableWebgl ?? true,
+        enableWebgl: settings.enableWebgl ?? true,
+        wordSeparator: settings.wordSeparator ?? " ()[]{}\\'\"`,:;",
       };
     } catch (error) {
       console.error('[crterm] failed to load terminal settings', error);
@@ -618,6 +627,7 @@ export class CrTermAppElement extends CrLitElement {
       fontSize: this.getConfiguredFontSize_(),
       scrollback: this.getConfiguredScrollback_(),
       theme: this.getConfiguredTheme_(),
+      wordSeparator: this.getConfiguredWordSeparator_(),
     });
     this.registerTerminalLinkProvider_();
     this.term_.attachCustomKeyEventHandler((event: KeyboardEvent) => {

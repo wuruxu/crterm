@@ -24,6 +24,14 @@
     padding: 10px 12px;
   }
 
+  .control input.word-separator-input {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+                 "Liberation Mono", "DejaVu Sans Mono", "Noto Sans Mono",
+                 "Courier New", monospace;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+
   .control select {
     min-height: 40px;
     padding: 0 12px;
@@ -189,6 +197,15 @@
           value="[[limitScrollback_]]" on-input="onLimitScrollbackInput_"
           on-blur="onLimitScrollbackBlur_"
           placeholder="$i18n{crTermLimitScrollbackDescription}">
+    </div>
+  </div>
+
+  <div class="cr-row field-row">
+    <div class="field-title">$i18n{crTermWordSeparatorLabel}</div>
+    <div class="control end-aligned-control">
+      <input type="text" class="word-separator-input" value="[[wordSeparator_]]"
+          on-input="onWordSeparatorInput_"
+          title="$i18n{crTermWordSeparatorDescription}">
     </div>
   </div>
 

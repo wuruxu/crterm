@@ -91,6 +91,8 @@ type TerminalThemePalette = {
 const CRTERM_THEME_PREF = 'crterm.term_theme';
 const CRTERM_DEFAULT_SHELL_PREF = 'crterm.default_shell';
 const CRTERM_LIMIT_SCROLLBACK_PREF = 'crterm.limit_scrollback';
+const CRTERM_WORD_SEPARATOR_PREF = 'crterm.word_separator';
+const DEFAULT_CRTERM_WORD_SEPARATOR = " ()[]{}\\'\"`,:;";
 const MIN_CRTERM_FONT_SIZE = 6;
 const MAX_CRTERM_FONT_SIZE = 36;
 const TERMINAL_FONT_PREVIEW_MIN_ROWS = 2;
@@ -575,6 +577,10 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
         type: String,
         value: '10240',
       },
+      wordSeparator_: {
+        type: String,
+        value: DEFAULT_CRTERM_WORD_SEPARATOR,
+      },
       termTheme_: {
         type: String,
         value: DEFAULT_CRTERM_THEME,
@@ -603,7 +609,8 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
           'prefs.crterm.limit_scrollback.value, ' +
           'prefs.crterm.restore_terminal_output_on_startup.value, ' +
           'prefs.crterm.close_button_visible.value, ' +
-          'prefs.crterm.enable_webgl.value)',
+          'prefs.crterm.enable_webgl.value, ' +
+          'prefs.crterm.word_separator.value)',
     ];
   }
 
@@ -629,6 +636,7 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
   declare private fontFamilyOptions_: DropdownMenuOptionList;
   declare private fontSizeTicks_: SliderTick[];
   declare private limitScrollback_: string;
+  declare private wordSeparator_: string;
   declare private selectedTerminalThemeId_: string;
   declare private termTheme_: string;
   declare private terminalThemePalettes_: TerminalThemePalette[];
@@ -707,7 +715,8 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
       limitScrollback: number|string|undefined,
       _restoreTerminalOutputOnStartup: boolean|undefined,
       _closeButtonVisible: boolean|undefined,
-      _enableWebgl: boolean|undefined) {
+      _enableWebgl: boolean|undefined,
+      wordSeparator: string|undefined) {
     if (typeof termTheme === 'string') {
       this.termTheme_ = termTheme || DEFAULT_CRTERM_THEME;
       this.updateSelectedTerminalTheme_();
@@ -735,6 +744,9 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
     if (typeof limitScrollback === 'number' ||
         typeof limitScrollback === 'string') {
       this.limitScrollback_ = `${limitScrollback}`;
+    }
+    if (typeof wordSeparator === 'string') {
+      this.wordSeparator_ = wordSeparator;
     }
   }
 
@@ -1152,6 +1164,12 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
     }
     this.setPrefValue(
         CRTERM_LIMIT_SCROLLBACK_PREF, Number(this.limitScrollback_));
+  }
+
+  private onWordSeparatorInput_(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.wordSeparator_ = value;
+    this.setPrefValue(CRTERM_WORD_SEPARATOR_PREF, value);
   }
 
   async searchContents(query: string) {

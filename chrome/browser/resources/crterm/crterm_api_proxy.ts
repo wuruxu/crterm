@@ -16,6 +16,8 @@ export interface CrTermProxy {
       fontSize: number,
       scrollback: number,
       restoreTerminalOutputOnStartup: boolean,
+      enableWebgl: boolean,
+      wordSeparator: string,
     },
   }>;
   getCallbackRouter(): PageCallbackRouter;

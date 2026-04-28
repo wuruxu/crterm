@@ -12,6 +12,7 @@ struct TerminalSettings {
   uint32 scrollback;
   bool restore_terminal_output_on_startup;
   bool enable_webgl;
+  string word_separator;
 };
 
 // Used by the WebUI page to bootstrap bidirectional communication.
