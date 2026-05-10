@@ -6,12 +6,14 @@ import 'chrome://resources/cr_elements/cr_icon_button/cr_icon_button.js';
 import 'chrome://resources/cr_elements/icons.html.js';
 
 import {loadTimeData} from 'chrome://resources/js/load_time_data.js';
-import {CrLitElement, type PropertyValues} from 'chrome://resources/lit/v3_0/lit.rollup.js';
+import {isMac, isWindows} from 'chrome://resources/js/platform.js';
+import {CrLitElement} from 'chrome://resources/lit/v3_0/lit.rollup.js';
+import type {PropertyValues} from 'chrome://resources/lit/v3_0/lit.rollup.js';
 
 import {getCss} from './crterm_app.css.js';
 import {getHtml} from './crterm_app.html.js';
 
-import type {CrTermProxy} from './crterm_api_proxy.js';
+import type {CrFilesReceiveOverlayStateData, CrTermProxy} from './crterm_api_proxy.js';
 import {CrTermProxyImpl} from './crterm_api_proxy.js';
 
 declare var Terminal: any;
@@ -23,21 +25,28 @@ const SEARCH_REFRESH_DEBOUNCE_MS = 120;
 const HTTPS_LINK_PATTERN = /https:\/\/[^\s<>"'`]+/g;
 const TERMINAL_TITLE_PATTERN = /([a-z_][a-z0-9_-]*@[a-z0-9._-]+)/i;
 
-export interface CrTermAppElement {
+export interface CrtermAppElement {
   $: {
     capturePreviewStage: HTMLElement,
-    footer: HTMLElement,
   };
   searchInput: HTMLInputElement,
 }
 
 declare global {
+  type GetUserMediaError = Error&{constraintName?: string};
+
+  interface Navigator {
+    webkitGetUserMedia?(
+        params: any, callback: (stream?: MediaStream) => void,
+        errorCallback: (error: GetUserMediaError) => void): void;
+  }
+
   interface Window {
     __crtermCaptureScreenFromContextMenu?: () => void;
   }
 }
 
-export class CrTermAppElement extends CrLitElement {
+export class CrtermAppElement extends CrLitElement {
   private static readonly SEARCH_INPUT_ID = 'searchInput';
   private static readonly XTERM_STYLESHEET_ID = 'xtermStylesheet';
   private term_: any = null;
@@ -55,14 +64,21 @@ export class CrTermAppElement extends CrLitElement {
   private searchRenderListener_: {dispose(): void}|null = null;
   private searchScrollListener_: {dispose(): void}|null = null;
   private searchResizeListener_: {dispose(): void}|null = null;
+  private selectionChangeListener_: {dispose(): void}|null = null;
+  private middleMouseDownListener_: ((event: MouseEvent) => void)|null = null;
+  private middleMousePasteTarget_: HTMLElement|null = null;
+  private crFilesReceiveOutsidePointerdownListener_:
+      ((event: PointerEvent) => void)|null = null;
   private restoredOutputLoaded_: boolean = false;
   private lastPersistedTitle_: string = '';
+  private primarySelectionBuffer_: string = '';
   private terminalSettings_: {
     termTheme: string,
     fontFamily: string,
     fontSize: number,
     scrollback: number,
     restoreTerminalOutputOnStartup: boolean,
+    selectionCopy: boolean,
     enableWebgl: boolean,
     wordSeparator: string,
   }|null = null;
@@ -89,9 +105,16 @@ export class CrTermAppElement extends CrLitElement {
   static override get properties() {
     return {
       captureSelectionVisible_: {type: Boolean},
+      captureCountdownVisible_: {type: Boolean},
+      captureCountdownValue_: {type: Number},
       capturePreviewDataUrl_: {type: String},
       captureSelectionStyle_: {type: String},
       captureHasSelection_: {type: Boolean},
+      crFilesReceiveOverlayVisible_: {type: Boolean},
+      crFilesReceivePanelOpen_: {type: Boolean},
+      crFilesReceiveOverlayEndpoint_: {type: String},
+      crFilesReceiveOverlayPinCode_: {type: String},
+      crFilesReceiveOverlaySaveDir_: {type: String},
       root_: {type: String},
       searchVisible_: {type: Boolean},
       searchQuery_: {type: String},
@@ -103,9 +126,16 @@ export class CrTermAppElement extends CrLitElement {
   private crtermProxy_: CrTermProxy = CrTermProxyImpl.getInstance();
   private listenerIds_: number[] = [];
   protected accessor captureSelectionVisible_: boolean = false;
+  protected accessor captureCountdownVisible_: boolean = false;
+  protected accessor captureCountdownValue_: number = 3;
   protected accessor capturePreviewDataUrl_: string = '';
   protected accessor captureSelectionStyle_: string = '';
   protected accessor captureHasSelection_: boolean = false;
+  protected accessor crFilesReceiveOverlayVisible_: boolean = false;
+  protected accessor crFilesReceivePanelOpen_: boolean = false;
+  protected accessor crFilesReceiveOverlayEndpoint_: string = '';
+  protected accessor crFilesReceiveOverlayPinCode_: string = '';
+  protected accessor crFilesReceiveOverlaySaveDir_: string = '';
   protected accessor root_: string = "";
   protected accessor searchVisible_: boolean = false;
   protected accessor searchQuery_: string = '';
@@ -157,6 +187,20 @@ export class CrTermAppElement extends CrLitElement {
       return this.terminalSettings_.restoreTerminalOutputOnStartup;
     }
     return loadTimeData.getBoolean('restoreTerminalOutputOnStartup');
+  }
+
+  private shouldUseInternalPrimarySelection_(): boolean {
+    return isMac || isWindows;
+  }
+
+  private isSelectionCopyEnabled_(): boolean {
+    if (!this.shouldUseInternalPrimarySelection_()) {
+      return false;
+    }
+    if (this.terminalSettings_) {
+      return this.terminalSettings_.selectionCopy;
+    }
+    return loadTimeData.getBoolean('selectionCopy');
   }
 
   private getDefaultTheme_(): {[key: string]: string} {
@@ -212,6 +256,7 @@ export class CrTermAppElement extends CrLitElement {
         fontSize: settings.fontSize,
         scrollback: settings.scrollback,
         restoreTerminalOutputOnStartup: settings.restoreTerminalOutputOnStartup,
+        selectionCopy: settings.selectionCopy ?? true,
         enableWebgl: settings.enableWebgl ?? true,
         wordSeparator: settings.wordSeparator ?? " ()[]{}\\'\"`,:;",
       };
@@ -220,14 +265,61 @@ export class CrTermAppElement extends CrLitElement {
     }
   }
 
+  private async loadCrFilesReceiveOverlayState_() {
+    try {
+      const {state} = await this.crtermProxy_.getCrFilesReceiveOverlayState();
+      this.applyCrFilesReceiveOverlayState_(state);
+    } catch (error) {
+      console.error('[crterm] failed to load crfiles receive overlay state',
+                    error);
+    }
+  }
+
+  private applyCrFilesReceiveOverlayState_(
+      state: CrFilesReceiveOverlayStateData) {
+    const visible =
+        state.visible && !!state.ipAddress && !!state.port && !!state.pinCode;
+    this.crFilesReceiveOverlayVisible_ = visible;
+    if (!visible) {
+      this.crFilesReceivePanelOpen_ = false;
+    }
+    this.crFilesReceiveOverlayEndpoint_ =
+        visible ? `${state.ipAddress}:${state.port}` : '';
+    this.crFilesReceiveOverlayPinCode_ = visible ? state.pinCode : '';
+    this.crFilesReceiveOverlaySaveDir_ = visible ? state.saveDir : '';
+  }
+
+  protected onCrFilesReceiveButtonClick_() {
+    this.crFilesReceivePanelOpen_ = !this.crFilesReceivePanelOpen_;
+  }
+
+  protected onCrFilesReceivePanelCloseClick_() {
+    this.crFilesReceivePanelOpen_ = false;
+  }
+
+  private onDocumentPointerdown_(event: PointerEvent) {
+    if (!this.crFilesReceivePanelOpen_) {
+      return;
+    }
+    const path = event.composedPath();
+    const clickedInsideCrFilesUi = path.some(target => {
+      return target instanceof HTMLElement &&
+          (target.classList.contains('crfiles-receive-panel') ||
+           target.classList.contains('crfiles-receive-button'));
+    });
+    if (!clickedInsideCrFilesUi) {
+      this.crFilesReceivePanelOpen_ = false;
+    }
+  }
+
   private ensureXtermStyles_() {
     if (!this.shadowRoot ||
-        this.shadowRoot.getElementById(CrTermAppElement.XTERM_STYLESHEET_ID)) {
+        this.shadowRoot.getElementById(CrtermAppElement.XTERM_STYLESHEET_ID)) {
       return;
     }
 
     const stylesheet = document.createElement('link');
-    stylesheet.id = CrTermAppElement.XTERM_STYLESHEET_ID;
+    stylesheet.id = CrtermAppElement.XTERM_STYLESHEET_ID;
     stylesheet.rel = 'stylesheet';
     stylesheet.href = 'crterm_xterm.css';
     this.shadowRoot.prepend(stylesheet);
@@ -295,22 +387,6 @@ export class CrTermAppElement extends CrLitElement {
     const newTab = window.open(url, '_blank', 'noopener,noreferrer');
     if (newTab) {
       newTab.opener = null;
-    }
-  }
-
-  override updated(changedProperties: PropertyValues<this>) {
-    super.updated(changedProperties);
-
-    if (!this.searchVisible_) {
-      return;
-    }
-
-    const searchInput =
-        this.shadowRoot?.getElementById(CrTermAppElement.SEARCH_INPUT_ID) as
-        HTMLInputElement | null;
-    if (searchInput && this.shadowRoot?.activeElement !== searchInput) {
-      searchInput.focus();
-      searchInput.select();
     }
   }
 
@@ -509,7 +585,7 @@ export class CrTermAppElement extends CrLitElement {
       return;
     }
 
-    renderer._isAttached = !!screenElement.isConnected;
+    renderer._isAttached = screenElement.isConnected;
     const originalRenderRows = renderer.renderRows.bind(renderer);
     renderer.renderRows = (...args: unknown[]) => {
       if (!renderer._isAttached &&
@@ -607,6 +683,84 @@ export class CrTermAppElement extends CrLitElement {
     }
   }
 
+  override connectedCallback() {
+    super.connectedCallback();
+    this.crFilesReceiveOutsidePointerdownListener_ =
+        this.onDocumentPointerdown_.bind(this);
+    document.addEventListener(
+        'pointerdown', this.crFilesReceiveOutsidePointerdownListener_, true);
+    const callbackRouter = this.crtermProxy_.getCallbackRouter();
+    this.listenerIds_.push(
+        callbackRouter.onTermOutput.addListener((output: number[]) => {
+          if (LOG_CRTERM_TRAFFIC) {
+            console.log('[crterm] webui onTermOutput bytes=', output);
+          }
+          this.handleTerminalOutput_(output, true);
+        }),
+        callbackRouter.onCrFilesReceiveOverlayChanged.addListener(
+            (state: CrFilesReceiveOverlayStateData) => {
+              this.applyCrFilesReceiveOverlayState_(state);
+            }),
+    );
+  }
+
+  override disconnectedCallback() {
+    if (this.crFilesReceiveOutsidePointerdownListener_) {
+      document.removeEventListener(
+          'pointerdown', this.crFilesReceiveOutsidePointerdownListener_, true);
+      this.crFilesReceiveOutsidePointerdownListener_ = null;
+    }
+    this.resizeObserver_?.disconnect();
+    this.resizeObserver_ = null;
+    if (this.resizeTimeoutId_ !== null) {
+      window.clearTimeout(this.resizeTimeoutId_);
+      this.resizeTimeoutId_ = null;
+    }
+    if (this.searchRefreshTimeoutId_ !== null) {
+      window.clearTimeout(this.searchRefreshTimeoutId_);
+      this.searchRefreshTimeoutId_ = null;
+    }
+    this.pendingBackendCols_ = null;
+    this.pendingBackendRows_ = null;
+    this.webglAddon_ = null;
+    this.webglRendererAttempted_ = false;
+    if (this.keydownListener_) {
+      document.removeEventListener('keydown', this.keydownListener_, true);
+      this.keydownListener_ = null;
+    }
+    this.searchRenderListener_?.dispose();
+    this.searchRenderListener_ = null;
+    this.searchScrollListener_?.dispose();
+    this.searchScrollListener_ = null;
+    this.searchResizeListener_?.dispose();
+    this.searchResizeListener_ = null;
+    this.selectionChangeListener_?.dispose();
+    this.selectionChangeListener_ = null;
+    if (this.middleMousePasteTarget_ && this.middleMouseDownListener_) {
+      this.middleMousePasteTarget_.removeEventListener(
+          'mousedown', this.middleMouseDownListener_, true);
+    }
+    this.middleMouseDownListener_ = null;
+    this.middleMousePasteTarget_ = null;
+    this.primarySelectionBuffer_ = '';
+    this.outputDecoder_ = new TextDecoder();
+    this.pendingOscSequence_ = '';
+    this.restoredOutputLoaded_ = false;
+    this.crFilesReceiveOverlayVisible_ = false;
+    this.crFilesReceivePanelOpen_ = false;
+    this.crFilesReceiveOverlayEndpoint_ = '';
+    this.crFilesReceiveOverlayPinCode_ = '';
+    this.crFilesReceiveOverlaySaveDir_ = '';
+    if (this.term_) {
+      this.term_.dispose();
+      this.term_ = null;
+    }
+    if (window.__crtermCaptureScreenFromContextMenu) {
+      delete window.__crtermCaptureScreenFromContextMenu;
+    }
+    super.disconnectedCallback();
+  }
+
   override async firstUpdated() {
     const terminal = this.shadowRoot?.getElementById('terminal');
     if (!terminal || typeof Terminal === 'undefined') {
@@ -615,6 +769,7 @@ export class CrTermAppElement extends CrLitElement {
 
     this.ensureXtermStyles_();
     await this.loadTerminalSettings_();
+    await this.loadCrFilesReceiveOverlayState_();
     const customTitle = loadTimeData.getString('customTitle').trim();
     if (customTitle) {
       this.setDocumentTitle_(customTitle);
@@ -631,13 +786,16 @@ export class CrTermAppElement extends CrLitElement {
     });
     this.registerTerminalLinkProvider_();
     this.term_.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+      this.updateClearSelectionOnUserInputForKeyEvent_(event);
       if (this.handleSearchShortcut_(event)) {
         return false;
       }
       return true;
     });
     this.term_.open(terminal);
+    this.term_.setClearSelectionOnUserInputEnabled?.(false);
     this.term_.focus();
+    this.installPrimarySelectionHandlers_(terminal);
     requestAnimationFrame(() => {
       this.fitTerminal_();
       this.maybeEnableWebglRenderer_(terminal);
@@ -663,55 +821,20 @@ export class CrTermAppElement extends CrLitElement {
     };
   }
 
-  override connectedCallback() {
-    super.connectedCallback();
-    const callbackRouter = this.crtermProxy_.getCallbackRouter();
-    this.listenerIds_.push(
-        callbackRouter.onTermOutput.addListener((output: number[]) => {
-          if (LOG_CRTERM_TRAFFIC) {
-            console.log('[crterm] webui onTermOutput bytes=', output);
-          }
-          this.handleTerminalOutput_(output, true);
-        }),
-    );
-  }
+  override updated(changedProperties: PropertyValues<this>) {
+    super.updated(changedProperties);
 
-  override disconnectedCallback() {
-    this.resizeObserver_?.disconnect();
-    this.resizeObserver_ = null;
-    if (this.resizeTimeoutId_ !== null) {
-      window.clearTimeout(this.resizeTimeoutId_);
-      this.resizeTimeoutId_ = null;
+    if (!this.searchVisible_) {
+      return;
     }
-    if (this.searchRefreshTimeoutId_ !== null) {
-      window.clearTimeout(this.searchRefreshTimeoutId_);
-      this.searchRefreshTimeoutId_ = null;
+
+    const searchInput =
+        this.shadowRoot?.getElementById(CrtermAppElement.SEARCH_INPUT_ID) as
+        HTMLInputElement | null;
+    if (searchInput && this.shadowRoot?.activeElement !== searchInput) {
+      searchInput.focus();
+      searchInput.select();
     }
-    this.pendingBackendCols_ = null;
-    this.pendingBackendRows_ = null;
-    this.webglAddon_ = null;
-    this.webglRendererAttempted_ = false;
-    if (this.keydownListener_) {
-      document.removeEventListener('keydown', this.keydownListener_, true);
-      this.keydownListener_ = null;
-    }
-    this.searchRenderListener_?.dispose();
-    this.searchRenderListener_ = null;
-    this.searchScrollListener_?.dispose();
-    this.searchScrollListener_ = null;
-    this.searchResizeListener_?.dispose();
-    this.searchResizeListener_ = null;
-    this.outputDecoder_ = new TextDecoder();
-    this.pendingOscSequence_ = '';
-    this.restoredOutputLoaded_ = false;
-    if (this.term_) {
-      this.term_.dispose();
-      this.term_ = null;
-    }
-    if (window.__crtermCaptureScreenFromContextMenu) {
-      delete window.__crtermCaptureScreenFromContextMenu;
-    }
-    super.disconnectedCallback();
   }
 
   protected onUserInput_(input: string) {
@@ -719,68 +842,72 @@ export class CrTermAppElement extends CrLitElement {
       console.log('[crterm] webui onUserInput=', JSON.stringify(input));
     }
     this.crtermProxy_.onUserInput(input);
+    this.term_?.setClearSelectionOnUserInputEnabled?.(false);
   }
 
-  //private shouldPreserveTerminalSelectionForKeyEvent_(
-  //    event: KeyboardEvent): boolean {
-  //  if (event.defaultPrevented || event.isComposing) {
-  //    return false;
-  //  }
+  private installPrimarySelectionHandlers_(terminal: HTMLElement) {
+    if (!this.term_ || !this.shouldUseInternalPrimarySelection_()) {
+      this.primarySelectionBuffer_ = '';
+      return;
+    }
 
-  //  if (event.ctrlKey || event.metaKey || event.altKey) {
-  //    return false;
-  //  }
+    this.selectionChangeListener_ =
+        this.term_.onSelectionChange(() => this.syncPrimarySelectionBuffer_());
+    this.middleMouseDownListener_ = (event: MouseEvent) =>
+        this.onTerminalMiddleMouseDown_(event);
+    this.middleMousePasteTarget_ = terminal;
+    terminal.addEventListener('mousedown', this.middleMouseDownListener_, true);
+    this.syncPrimarySelectionBuffer_();
+  }
 
-  //  return event.key.length === 1;
-  //}
+  private syncPrimarySelectionBuffer_() {
+    if (!this.term_ || !this.isSelectionCopyEnabled_() ||
+        !this.term_.hasSelection()) {
+      this.primarySelectionBuffer_ = '';
+      return;
+    }
 
-  //private maybePreserveTerminalSelectionBeforeInput_(event: KeyboardEvent) {
-  //  if (!this.term_?.hasSelection?.() ||
-  //      !this.shouldPreserveTerminalSelectionForKeyEvent_(event)) {
-  //    return;
-  //  }
+    this.primarySelectionBuffer_ = this.term_.getSelection();
+  }
 
-  //  const selection = this.term_.getSelectionPosition?.();
-  //  if (!selection?.start || !selection?.end) {
-  //    return;
-  //  }
+  private onTerminalMiddleMouseDown_(event: MouseEvent) {
+    if (event.button !== 1 || event.defaultPrevented ||
+        !this.isSelectionCopyEnabled_()) {
+      return;
+    }
 
-  //  this.pendingTerminalSelectionRestore_ = {
-  //    start: {x: selection.start.x, y: selection.start.y},
-  //    end: {x: selection.end.x, y: selection.end.y},
-  //  };
-  //}
+    if (!this.primarySelectionBuffer_) {
+      return;
+    }
 
-  //private scheduleTerminalSelectionRestore_() {
-  //  if (!this.pendingTerminalSelectionRestore_) {
-  //    return;
-  //  }
+    event.preventDefault();
+    event.stopPropagation();
+    this.term_?.focus();
+    this.term_?.paste(this.primarySelectionBuffer_);
+  }
 
-  //  if (this.selectionRestoreTimeoutId_ !== null) {
-  //    window.clearTimeout(this.selectionRestoreTimeoutId_);
-  //  }
+  private shouldClearSelectionOnUserInputForKeyEvent_(
+      event: KeyboardEvent): boolean {
+    if (event.defaultPrevented || event.isComposing) {
+      return false;
+    }
 
-  //  this.selectionRestoreTimeoutId_ = window.setTimeout(() => {
-  //    this.selectionRestoreTimeoutId_ = null;
-  //    this.restorePendingTerminalSelection_();
-  //  }, CrTermAppElement.TERMINAL_SELECTION_RESTORE_DELAY_MS);
-  //}
+    if (event.key === 'Enter') {
+      return true;
+    }
 
-  //private restorePendingTerminalSelection_() {
-  //  const selection = this.pendingTerminalSelectionRestore_;
-  //  this.pendingTerminalSelectionRestore_ = null;
-  //  if (!selection || !this.term_?.select) {
-  //    return;
-  //  }
+    return event.key.toLowerCase() === 'l' && event.ctrlKey && !event.altKey &&
+        !event.metaKey;
+  }
 
-  //  const length = (selection.end.y - selection.start.y) * this.term_.cols +
-  //      selection.end.x - selection.start.x;
-  //  if (length <= 0) {
-  //    return;
-  //  }
+  private updateClearSelectionOnUserInputForKeyEvent_(event: KeyboardEvent) {
+    if (!this.term_?.setClearSelectionOnUserInputEnabled) {
+      return;
+    }
 
-  //  this.term_.select(selection.start.x, selection.start.y, length);
-  //}
+    this.term_.setClearSelectionOnUserInputEnabled(
+        this.shouldClearSelectionOnUserInputForKeyEvent_(event));
+  }
 
   protected closeCaptureSelection_() {
     this.captureSelectionVisible_ = false;
@@ -796,15 +923,127 @@ export class CrTermAppElement extends CrLitElement {
     this.term_?.focus();
   }
 
+  protected onCaptureCancel_() {
+    this.closeCaptureSelection_();
+  }
+
+  protected onCaptureClose_() {
+    this.closeCaptureSelection_();
+  }
+
+  protected onCaptureCancelClick_() {
+    this.closeCaptureSelection_();
+  }
+
+  private getFeedbackStyleScreenStream_(): Promise<MediaStream> {
+    return new Promise((resolve, reject) => {
+      const getUserMedia = navigator.webkitGetUserMedia?.bind(navigator);
+      if (!getUserMedia) {
+        reject(new Error('Screen capture is not available'));
+        return;
+      }
+
+      getUserMedia(
+          {
+            video: {
+              mandatory: {
+                chromeMediaSource: 'screen',
+                maxWidth: 4096,
+                maxHeight: 2560,
+              },
+            },
+          },
+          stream => {
+            if (stream) {
+              resolve(stream);
+              return;
+            }
+            reject(new Error('No screen capture stream'));
+          },
+          error => reject(error));
+    });
+  }
+
+  private showCapturedScreenCanvas_(canvas: HTMLCanvasElement) {
+    this.captureCanvas_ = canvas;
+    this.capturePreviewDataUrl_ = canvas.toDataURL('image/png');
+    this.captureSelectionVisible_ = true;
+    this.captureSelectionStyle_ = '';
+    this.captureHasSelection_ = true;
+    this.captureSelectionRect_ = null;
+    this.captureSelectionStart_ = null;
+    this.captureSelectionActive_ = false;
+    this.captureSelectionDragMode_ = null;
+    this.captureSelectionDragOffset_ = null;
+  }
+
+  private async showCaptureCountdown_() {
+    this.captureCountdownVisible_ = true;
+    try {
+      for (const value of [3, 2, 1]) {
+        this.captureCountdownValue_ = value;
+        await new Promise<void>(
+            resolve => window.setTimeout(resolve, 1000));
+      }
+      this.captureCountdownVisible_ = false;
+      await new Promise<void>(
+          resolve => window.setTimeout(resolve, 1000));
+    } finally {
+      this.captureCountdownVisible_ = false;
+    }
+  }
+
+  private isScreenCaptureStreamLive_(stream: MediaStream|null): boolean {
+    if (!stream?.active) {
+      return false;
+    }
+    const track = stream.getVideoTracks()[0];
+    return !!track && track.readyState === 'live';
+  }
+
+  private waitForScreenCaptureVideoFrame_(
+      video: HTMLVideoElement, stream: MediaStream): Promise<boolean> {
+    return new Promise(resolve => {
+      const track = stream.getVideoTracks()[0];
+      if (!track || track.readyState !== 'live') {
+        resolve(false);
+        return;
+      }
+
+      let settled = false;
+      const finish = (success: boolean) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        track.removeEventListener('ended', onEnded);
+        video.onloadeddata = null;
+        resolve(success);
+      };
+      const onEnded = () => finish(false);
+      track.addEventListener('ended', onEnded, {once: true});
+
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        finish(true);
+        return;
+      }
+      video.onloadeddata = () => finish(track.readyState === 'live');
+    });
+  }
+
+  private waitForCapturePreviewFrame_(): Promise<void> {
+    if (document.visibilityState !== 'visible') {
+      return new Promise(resolve => window.setTimeout(resolve, 0));
+    }
+    return new Promise(resolve => requestAnimationFrame(() => resolve()));
+  }
+
   private async captureScreenFromContextMenu_() {
     let stream: MediaStream|null = null;
     try {
-      stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: false,
-      });
-      const track = stream.getVideoTracks()[0];
-      if (!track) {
+      this.closeCaptureSelection_();
+      stream = await this.getFeedbackStyleScreenStream_();
+      if (!this.isScreenCaptureStreamLive_(stream)) {
         return;
       }
 
@@ -812,17 +1051,26 @@ export class CrTermAppElement extends CrLitElement {
       video.srcObject = stream;
       video.muted = true;
       await video.play();
-      await new Promise<void>((resolve) => {
-        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-          resolve();
-          return;
-        }
-        video.onloadeddata = () => resolve();
-      });
+      if (!this.isScreenCaptureStreamLive_(stream)) {
+        return;
+      }
+      if (!await this.waitForScreenCaptureVideoFrame_(video, stream)) {
+        return;
+      }
 
       const width = video.videoWidth;
       const height = video.videoHeight;
       if (!width || !height) {
+        return;
+      }
+
+      await this.showCaptureCountdown_();
+      if (!this.isScreenCaptureStreamLive_(stream)) {
+        return;
+      }
+      await this.updateComplete;
+      await this.waitForCapturePreviewFrame_();
+      if (!this.isScreenCaptureStreamLive_(stream)) {
         return;
       }
 
@@ -835,19 +1083,17 @@ export class CrTermAppElement extends CrLitElement {
       }
 
       context.drawImage(video, 0, 0, width, height);
-      this.captureCanvas_ = canvas;
-      this.capturePreviewDataUrl_ = canvas.toDataURL('image/png');
-      this.captureSelectionVisible_ = true;
-      this.captureSelectionStyle_ = '';
-      this.captureHasSelection_ = false;
-      this.captureSelectionRect_ = null;
-      this.captureSelectionStart_ = null;
-      this.captureSelectionActive_ = false;
-      this.captureSelectionDragMode_ = null;
-      this.captureSelectionDragOffset_ = null;
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+      await new Promise<void>(resolve => window.setTimeout(resolve, 120));
+      await this.crtermProxy_.activateCurrentTab();
+      this.showCapturedScreenCanvas_(canvas);
+      await this.updateComplete;
+      await this.crtermProxy_.activateCurrentTab();
     } catch (error) {
       console.error('[crterm] failed to capture screen', error);
-      this.term_?.focus();
+      this.captureCountdownVisible_ = false;
+      this.closeCaptureSelection_();
     } finally {
       stream?.getTracks().forEach(track => track.stop());
     }
@@ -927,6 +1173,10 @@ export class CrTermAppElement extends CrLitElement {
         event.pointerId);
   }
 
+  protected onCapturePointerdown_(event: PointerEvent) {
+    this.beginCaptureSelection_(event);
+  }
+
   protected updateCaptureSelection_(event: PointerEvent) {
     if (!this.captureSelectionActive_) {
       return;
@@ -963,6 +1213,10 @@ export class CrTermAppElement extends CrLitElement {
     this.updateCaptureSelectionFromPoints_(this.captureSelectionStart_, point);
   }
 
+  protected onCapturePointermove_(event: PointerEvent) {
+    this.updateCaptureSelection_(event);
+  }
+
   protected endCaptureSelection_(event: PointerEvent) {
     if (!this.captureSelectionActive_) {
       return;
@@ -984,28 +1238,41 @@ export class CrTermAppElement extends CrLitElement {
         event.pointerId);
   }
 
+  protected onCapturePointerup_(event: PointerEvent) {
+    this.endCaptureSelection_(event);
+  }
+
+  protected onCapturePointerleave_(event: PointerEvent) {
+    this.endCaptureSelection_(event);
+  }
+
   protected async saveCaptureSelection_() {
-    if (!this.captureCanvas_ || !this.captureSelectionRect_ ||
-        !this.captureHasSelection_) {
+    if (!this.captureCanvas_ || !this.captureHasSelection_) {
       return;
     }
 
-    const stage = this.shadowRoot?.getElementById('capturePreviewStage');
-    if (!stage || !stage.clientWidth || !stage.clientHeight) {
-      this.closeCaptureSelection_();
-      return;
-    }
+    let sourceX = 0;
+    let sourceY = 0;
+    let sourceWidth = this.captureCanvas_.width;
+    let sourceHeight = this.captureCanvas_.height;
+    if (this.captureSelectionRect_) {
+      const stage = this.shadowRoot?.getElementById('capturePreviewStage');
+      if (!stage || !stage.clientWidth || !stage.clientHeight) {
+        this.closeCaptureSelection_();
+        return;
+      }
 
-    const scaleX = this.captureCanvas_.width / stage.clientWidth;
-    const scaleY = this.captureCanvas_.height / stage.clientHeight;
-    const sourceX = Math.max(0, Math.floor(this.captureSelectionRect_.x * scaleX));
-    const sourceY = Math.max(0, Math.floor(this.captureSelectionRect_.y * scaleY));
-    const sourceWidth = Math.min(
-        this.captureCanvas_.width - sourceX,
-        Math.max(1, Math.floor(this.captureSelectionRect_.width * scaleX)));
-    const sourceHeight = Math.min(
-        this.captureCanvas_.height - sourceY,
-        Math.max(1, Math.floor(this.captureSelectionRect_.height * scaleY)));
+      const scaleX = this.captureCanvas_.width / stage.clientWidth;
+      const scaleY = this.captureCanvas_.height / stage.clientHeight;
+      sourceX = Math.max(0, Math.floor(this.captureSelectionRect_.x * scaleX));
+      sourceY = Math.max(0, Math.floor(this.captureSelectionRect_.y * scaleY));
+      sourceWidth = Math.min(
+          this.captureCanvas_.width - sourceX,
+          Math.max(1, Math.floor(this.captureSelectionRect_.width * scaleX)));
+      sourceHeight = Math.min(
+          this.captureCanvas_.height - sourceY,
+          Math.max(1, Math.floor(this.captureSelectionRect_.height * scaleY)));
+    }
 
     const croppedCanvas = document.createElement('canvas');
     croppedCanvas.width = sourceWidth;
@@ -1036,6 +1303,10 @@ export class CrTermAppElement extends CrLitElement {
     }
 
     this.closeCaptureSelection_();
+  }
+
+  protected async onCaptureSaveClick_() {
+    await this.saveCaptureSelection_();
   }
 
   private async loadStoredTerminalOutput_() {
@@ -1110,7 +1381,7 @@ export class CrTermAppElement extends CrLitElement {
     this.updateSearchMatches_({reveal: true});
   }
 
-  protected onSearchKeyDown_(event: KeyboardEvent) {
+  protected onSearchKeydown_(event: KeyboardEvent) {
     if (event.key === 'Enter') {
       event.preventDefault();
       if (event.shiftKey) {
@@ -1131,8 +1402,16 @@ export class CrTermAppElement extends CrLitElement {
     this.jumpToSearchMatch_(1);
   }
 
+  protected onSearchNextClick_() {
+    this.findNext_();
+  }
+
   protected findPrevious_() {
     this.jumpToSearchMatch_(-1);
+  }
+
+  protected onSearchPreviousClick_() {
+    this.findPrevious_();
   }
 
   protected closeSearch_() {
@@ -1144,6 +1423,10 @@ export class CrTermAppElement extends CrLitElement {
     this.searchHighlightStyles_ = [];
     this.searchMarkerStyles_ = [];
     this.term_?.focus();
+  }
+
+  protected onSearchCloseClick_() {
+    this.closeSearch_();
   }
 
   protected getSearchCountLabel_(): string {
@@ -1379,9 +1662,9 @@ export class CrTermAppElement extends CrLitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'crterm-app': CrTermAppElement;
+    'crterm-app': CrtermAppElement;
   }
 }
 
 customElements.define(
-    CrTermAppElement.is, CrTermAppElement);
+    CrtermAppElement.is, CrtermAppElement);

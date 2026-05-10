@@ -209,6 +209,14 @@
     </div>
   </div>
 
+  <if expr="is_macosx or is_win">
+    <settings-toggle-button no-extension-indicator
+        label="$i18n{crTermSelectionCopyAndMiddleClickPasteLabel}"
+        sub-label="$i18n{crTermSelectionCopyAndMiddleClickPasteDescription}"
+        pref="{{prefs.crterm.selection_copy}}">
+    </settings-toggle-button>
+  </if>
+
   <settings-toggle-button no-extension-indicator
       label="$i18n{crTermCloseButtonLabel}"
       pref="{{prefs.crterm.close_button_visible}}">

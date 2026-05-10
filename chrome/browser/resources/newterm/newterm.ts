@@ -21,6 +21,10 @@ function openTerminalUrl(url: string) {
   window.location.assign(normalizedUrl);
 }
 
+function openUrl(url: string) {
+  window.location.assign(url);
+}
+
 function activateTab(tabButton: HTMLElement) {
   const targetPanelId = tabButton.dataset['tabTarget'];
   if (!targetPanelId) {
@@ -95,6 +99,12 @@ window.addEventListener('DOMContentLoaded', () => {
   const homeButton = document.getElementById('openHomeButton');
   homeButton?.addEventListener('click', () => {
     openTerminalUrl(loadTimeData.getString('homeTermUrl'));
+  });
+
+  const browseHomeFilesButton =
+      document.getElementById('browseHomeFilesButton');
+  browseHomeFilesButton?.addEventListener('click', () => {
+    openUrl(loadTimeData.getString('homeCrFileUrl'));
   });
 
   const tmpButton = document.getElementById('openTmpButton');

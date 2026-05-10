@@ -4,4 +4,7 @@
   <include name="IDR_CRTERM_UI_JS" file="../webui/crterm/resources/xterm.js" preprocess="true" type="BINDATA" compress="brotli" />
   <include name="IDR_CRTERM_UI_WEBGL_ADDON_JS" file="../webui/crterm/resources/xterm-addon-webgl.js" preprocess="true" type="BINDATA" compress="brotli" />
   <include name="IDR_CRTERM_LOGO_SVG" file="../webui/crterm/resources/crterm-logo.svg" preprocess="true" type="BINDATA" compress="brotli" />
+  <include name="IDR_CRFILES_QUIC_CHAIN_PEM" file="../webui/crterm/resources/crfiles-quic-chain.pem" type="BINDATA" />
+  <include name="IDR_CRFILES_QUIC_LEAF_CERT_KEY" file="../webui/crterm/resources/crfiles-quic-leaf-cert.key" type="BINDATA" />
+  <include name="IDR_CRFILES_QUIC_LEAF_CERT_KEY_SCT" file="../webui/crterm/resources/crfiles-quic-leaf-cert.key.sct" type="BINDATA" />
 </grit-part>

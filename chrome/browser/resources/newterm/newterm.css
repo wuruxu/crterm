@@ -59,11 +59,18 @@ h1 {
 }
 
 .actions {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 12px;
+}
+
+.actions-row {
   align-items: stretch;
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
-  padding-top: 12px;
 }
 
 cr-button {
@@ -166,12 +173,30 @@ cr-button {
   text-shadow: 0 0 8px rgba(99, 255, 174, 0.45);
 }
 
+.crfiles-glyph {
+  align-items: center;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  min-width: 54px;
+}
+
+.crfiles-glyph img {
+  display: block;
+  height: 40px;
+  width: 40px;
+}
+
 .terminal-button:hover .terminal-glyph {
   border-color: rgba(127, 255, 188, 0.62);
   box-shadow:
       inset 0 0 18px rgba(61, 255, 151, 0.12),
       0 0 16px rgba(61, 255, 151, 0.18);
   color: #8dffc5;
+}
+
+.terminal-button:hover .crfiles-glyph {
+  filter: drop-shadow(0 0 12px rgba(61, 255, 151, 0.22));
 }
 
 .button-title {
@@ -390,7 +415,7 @@ cr-button {
   box-shadow:
       inset 0 0 0 1px rgba(149, 255, 198, 0.12),
       0 0 22px rgba(44, 255, 143, 0.18);
-  color: #ffffff;
+  color: #fff;
 }
 
 .command-block {

@@ -11,8 +11,17 @@ struct TerminalSettings {
   uint32 font_size;
   uint32 scrollback;
   bool restore_terminal_output_on_startup;
+  bool selection_copy;
   bool enable_webgl;
   string word_separator;
+};
+
+struct CrFilesReceiveOverlayState {
+  bool visible;
+  string ip_address;
+  uint32 port;
+  string pin_code;
+  string save_dir;
 };
 
 // Used by the WebUI page to bootstrap bidirectional communication.
@@ -26,6 +35,7 @@ interface PageHandlerFactory {
 // remote for the Terminal interface.
 interface Page {
   OnTermOutput(array<uint8> output);
+  OnCrFilesReceiveOverlayChanged(CrFilesReceiveOverlayState state);
 };
 
 // The interface for the CrTerm page handler. The backend can use this to send
@@ -37,6 +47,9 @@ interface PageHandler {
   // Saves a captured PNG image and writes the saved file path into terminal.
   SaveCapturedScreenPng(array<uint8> png_bytes) => (bool success, string path);
 
+  // Activates the browser window and tab that host this WebUI.
+  ActivateCurrentTab() => (bool success);
+
   // Updates the backing PTY window size.
   OnTerminalResize(uint32 cols, uint32 rows);
 
@@ -45,6 +58,9 @@ interface PageHandler {
 
   // Returns the current terminal settings from profile prefs.
   GetTerminalSettings() => (TerminalSettings settings);
+
+  // Returns the current CrFiles receive overlay state for this profile.
+  GetCrFilesReceiveOverlayState() => (CrFilesReceiveOverlayState state);
 
   // Persists the current page title into the tab's session extra data.
   SetPageTitle(string title);

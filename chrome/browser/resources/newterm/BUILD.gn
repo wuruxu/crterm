@@ -10,6 +10,7 @@ build_webui("build") {
   grd_prefix = "newterm"
 
   static_files = [
+    "crFiles-logo.svg",
     "newterm.css",
     "newterm.html",
   ]

@@ -143,6 +143,9 @@ copy_top_level_matches() {
 copy_if_exists "${BUILD_DIR}/chrome" "${APP_ROOT}"
 copy_if_exists "${BUILD_DIR}/chrome-wrapper" "${APP_ROOT}"
 copy_if_exists "${BUILD_DIR}/chrome_crashpad_handler" "${APP_ROOT}"
+copy_if_exists "${BUILD_DIR}/chrome_sandbox" "${APP_ROOT}"
+copy_if_exists "${BUILD_DIR}/chrome-sandbox" "${APP_ROOT}"
+copy_if_exists "${BUILD_DIR}/libvulkan.so.1" "${APP_ROOT}"
 
 copy_top_level_matches "*.pak"
 copy_top_level_matches "*.bin"
@@ -160,11 +163,22 @@ for dir_name in \
   copy_if_exists "${BUILD_DIR}/${dir_name}" "${APP_ROOT}"
 done
 
-strip --strip-unneeded "${APP_ROOT}/chrome"
-strip --strip-unneeded "${APP_ROOT}/chrome_crashpad_handler"
-strip --strip-unneeded "${APP_ROOT}/libVkLayer_khronos_validation.so"
-strip --strip-unneeded "${APP_ROOT}/libvk_swiftshader.so"
-strip --strip-unneeded "${APP_ROOT}/libGLESv2.so"
+strip_if_exists() {
+  local path="$1"
+  if [[ -e "${path}" ]]; then
+    strip --strip-unneeded "${path}"
+  fi
+}
+
+# Keep the main browser binary byte-for-byte compatible with the build output.
+# Chromium's own build can produce stripped artifacts when needed; stripping here
+# makes packaged-only startup crashes harder to diagnose.
+strip_if_exists "${APP_ROOT}/chrome"
+strip_if_exists "${APP_ROOT}/chrome_crashpad_handler"
+strip_if_exists "${APP_ROOT}/libVkLayer_khronos_validation.so"
+strip_if_exists "${APP_ROOT}/libvk_swiftshader.so"
+strip_if_exists "${APP_ROOT}/libGLESv2.so"
+strip_if_exists "${APP_ROOT}/libvulkan.so.1"
 
 install -m 0644 "${ICON_SOURCE}" \
   "${PKG_ROOT}/usr/share/icons/hicolor/scalable/apps/${PKG_NAME}.svg"
@@ -213,6 +227,25 @@ EOF
 cat > "${DEBIAN_DIR}/postinst" <<'EOF'
 #!/usr/bin/env bash
 set -e
+
+if [[ -d /opt/crterm ]]; then
+  chown -R root:root /opt/crterm || true
+fi
+
+if [[ -f /usr/bin/crterm ]]; then
+  chown root:root /usr/bin/crterm || true
+  chmod 0755 /usr/bin/crterm || true
+fi
+
+if [[ -f /opt/crterm/chrome_sandbox ]]; then
+  chown root:root /opt/crterm/chrome_sandbox || true
+  chmod 4755 /opt/crterm/chrome_sandbox || true
+fi
+
+if [[ -f /opt/crterm/chrome-sandbox ]]; then
+  chown root:root /opt/crterm/chrome-sandbox || true
+  chmod 4755 /opt/crterm/chrome-sandbox || true
+fi
 
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database /usr/share/applications || true

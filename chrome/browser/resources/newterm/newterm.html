@@ -17,14 +17,24 @@ found in the LICENSE file.
     <section class="hero">
       <h1>$i18n{newTermQuickstartTitle}</h1>
       <div class="actions">
-        <cr-button id="openHomeButton" class="action-button terminal-button">
-          <span class="terminal-glyph" slot="prefix-icon" aria-hidden="true">&gt;_</span>
-          <span class="button-title">$i18n{newTermOpenInHome}</span>
-        </cr-button>
-        <cr-button id="openTmpButton" class="action-button terminal-button">
-          <span class="terminal-glyph" slot="prefix-icon" aria-hidden="true">&gt;_</span>
-          <span class="button-title">$i18n{newTermOpenInTmp}</span>
-        </cr-button>
+        <div class="actions-row">
+          <cr-button id="openHomeButton" class="action-button terminal-button">
+            <span class="terminal-glyph" slot="prefix-icon" aria-hidden="true">&gt;_</span>
+            <span class="button-title">$i18n{newTermOpenInHome}</span>
+          </cr-button>
+          <cr-button id="openTmpButton" class="action-button terminal-button">
+            <span class="terminal-glyph" slot="prefix-icon" aria-hidden="true">&gt;_</span>
+            <span class="button-title">$i18n{newTermOpenInTmp}</span>
+          </cr-button>
+        </div>
+        <div class="actions-row">
+          <cr-button id="browseHomeFilesButton" class="action-button terminal-button">
+            <span class="crfiles-glyph" slot="prefix-icon" aria-hidden="true">
+              <img src="crFiles-logo.svg" alt="">
+            </span>
+            <span class="button-title">$i18n{newTermBrowseHomeFiles}</span>
+          </cr-button>
+        </div>
       </div>
     </section>
 

@@ -1,5 +1,13 @@
 import {PageCallbackRouter, PageHandlerFactory, PageHandlerRemote} from './crterm.mojom-webui.js';
 
+export interface CrFilesReceiveOverlayStateData {
+  visible: boolean;
+  ipAddress: string;
+  port: number;
+  pinCode: string;
+  saveDir: string;
+}
+
 export interface CrTermProxy {
   onUserInput(input: string): void;
   onTerminalResize(cols: number, rows: number): void;
@@ -7,6 +15,7 @@ export interface CrTermProxy {
     success: boolean,
     path: string,
   }>;
+  activateCurrentTab(): Promise<{success: boolean}>;
   setPageTitle(title: string): void;
   getStoredTerminalOutput(): Promise<{output: number[], sessionId: string}>;
   getTerminalSettings(): Promise<{
@@ -16,9 +25,13 @@ export interface CrTermProxy {
       fontSize: number,
       scrollback: number,
       restoreTerminalOutputOnStartup: boolean,
+      selectionCopy: boolean,
       enableWebgl: boolean,
       wordSeparator: string,
     },
+  }>;
+  getCrFilesReceiveOverlayState(): Promise<{
+    state: CrFilesReceiveOverlayStateData,
   }>;
   getCallbackRouter(): PageCallbackRouter;
 }
@@ -50,6 +63,10 @@ export class CrTermProxyImpl implements CrTermProxy {
     return this.handler.saveCapturedScreenPng(pngBytes);
   }
 
+  activateCurrentTab() {
+    return this.handler.activateCurrentTab();
+  }
+
   setPageTitle(title: string) {
     this.handler.setPageTitle(title);
   }
@@ -60,6 +77,10 @@ export class CrTermProxyImpl implements CrTermProxy {
 
   getTerminalSettings() {
     return this.handler.getTerminalSettings();
+  }
+
+  getCrFilesReceiveOverlayState() {
+    return this.handler.getCrFilesReceiveOverlayState();
   }
 
   getCallbackRouter() {

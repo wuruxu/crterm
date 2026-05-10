@@ -551,7 +551,7 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
     return {
       defaultShell_: {
         type: String,
-        value: '/usr/bin/bash',
+        value: '',
       },
       webglSystemAvailable_: {
         type: Boolean,
@@ -670,8 +670,9 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
   private getWebGLSubLabel_(): string {
     const baseDesc = loadTimeData.getString('crTermEnableWebGLDescription');
     const systemStatus = this.webglSystemAvailable_ ?
-        '(system: supported)' : '(system: not supported)';
-    return `${baseDesc} ${systemStatus}`;
+        loadTimeData.getString('crTermWebglSystemSupported') :
+        loadTimeData.getString('crTermWebglSystemNotSupported');
+    return `${baseDesc} (${systemStatus})`;
   }
 
   override disconnectedCallback() {

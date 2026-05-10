@@ -70,6 +70,167 @@
   cursor: text;
 }
 
+.crfiles-receive-dock {
+  align-items: flex-end;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: absolute;
+  right: 16px;
+  z-index: 22;
+}
+
+.crfiles-receive-button {
+  align-items: center;
+  background: var(--color-sys-surface3);
+  border: 1px solid var(--color-sys-tonal-outline);
+  border-radius: 8px;
+  box-shadow: var(--cr-elevation-2);
+  cursor: pointer;
+  display: flex;
+  height: 48px;
+  justify-content: center;
+  padding: 0;
+  position: relative;
+  width: 48px;
+}
+
+.crfiles-receive-button:hover {
+  background: var(--cr-hover-background-color);
+}
+
+.crfiles-receive-button:focus-visible {
+  outline: 2px solid var(--color-sys-primary);
+  outline-offset: 2px;
+}
+
+.crfiles-receive-button img {
+  height: 30px;
+  width: 30px;
+}
+
+.crfiles-receive-button-running {
+  background: #1ecb6b;
+  border: 2px solid var(--color-sys-surface3);
+  border-radius: 50%;
+  bottom: 4px;
+  box-shadow: 0 0 0 0 rgba(30, 203, 107, 0.58);
+  height: 10px;
+  position: absolute;
+  right: 4px;
+  width: 10px;
+  animation: crfiles-running-pulse 1.8s ease-out infinite;
+}
+
+.crfiles-receive-panel {
+  background: var(--color-sys-surface3);
+  border: 1px solid var(--color-sys-tonal-outline);
+  border-radius: 8px;
+  box-shadow: var(--cr-elevation-3);
+  color: var(--color-sys-on-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(366px, calc(100vw - 32px));
+  min-width: min(322px, calc(100vw - 32px));
+  padding: 12px;
+}
+
+.crfiles-receive-panel-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 32px;
+}
+
+.crfiles-receive-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.crfiles-receive-close {
+  --cr-icon-button-icon-size: 18px;
+  --cr-icon-button-margin-end: 0;
+  --cr-icon-button-margin-start: 0;
+  --cr-icon-button-size: 28px;
+}
+
+.crfiles-receive-status {
+  align-items: center;
+  color: var(--color-sys-on-surface-variant);
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.crfiles-receive-running-dot {
+  background: #1ecb6b;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(30, 203, 107, 0.5);
+  height: 8px;
+  width: 8px;
+  animation: crfiles-running-pulse 1.8s ease-out infinite;
+}
+
+.crfiles-receive-detail {
+  display: grid;
+  gap: 4px;
+}
+
+.crfiles-receive-inline-row {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 96px minmax(0, 1fr);
+}
+
+.crfiles-receive-pin-detail {
+  min-width: 0;
+}
+
+.crfiles-receive-label {
+  color: var(--color-sys-on-surface-variant);
+  font-size: 12px;
+  line-height: 1.0;
+}
+
+.crfiles-receive-value,
+.crfiles-receive-pin {
+  background: var(--color-sys-surface1);
+  border: 1px solid var(--color-sys-tonal-outline);
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-family: 'Google Sans Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  line-height: 1.2;
+  min-height: 32px;
+  overflow-wrap: anywhere;
+  padding: 7px 9px;
+}
+
+.crfiles-receive-pin {
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 366px) {
+  .crfiles-receive-inline-row {
+    grid-template-columns: 2fr;
+  }
+}
+
+@keyframes crfiles-running-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(30, 203, 107, 0.58);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(30, 203, 107, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(30, 203, 107, 0);
+  }
+}
+
 .search-box {
   align-items: center;
   background: var(--color-sys-surface3);
@@ -83,6 +244,34 @@
   right: 12px;
   top: 12px;
   z-index: 20;
+}
+
+.capture-countdown-overlay {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.58);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+  z-index: 30;
+}
+
+.capture-countdown-value {
+  align-items: center;
+  background: rgba(20, 24, 31, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.38);
+  color: #fff;
+  display: flex;
+  font-size: 114px;
+  font-weight: 600;
+  height: 198px;
+  justify-content: center;
+  line-height: 1;
+  user-select: none;
+  width: 198px;
 }
 
 .capture-dialog {
