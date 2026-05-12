@@ -609,6 +609,7 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
           'prefs.crterm.limit_scrollback.value, ' +
           'prefs.crterm.restore_terminal_output_on_startup.value, ' +
           'prefs.crterm.close_button_visible.value, ' +
+          'prefs.crterm.toolbar_visible.value, ' +
           'prefs.crterm.enable_webgl.value, ' +
           'prefs.crterm.word_separator.value)',
     ];
@@ -716,6 +717,7 @@ export class SettingsCrTermPageElement extends SettingsCrTermPageElementBase
       limitScrollback: number|string|undefined,
       _restoreTerminalOutputOnStartup: boolean|undefined,
       _closeButtonVisible: boolean|undefined,
+      _toolbarVisible: boolean|undefined,
       _enableWebgl: boolean|undefined,
       wordSeparator: string|undefined) {
     if (typeof termTheme === 'string') {

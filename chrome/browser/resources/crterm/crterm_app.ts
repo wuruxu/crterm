@@ -778,6 +778,7 @@ export class CrtermAppElement extends CrLitElement {
     this.term_ = new Terminal({
       convertEol: true,
       cursorBlink: true,
+      alternateScrollMode: false,
       fontFamily: this.getConfiguredFontFamily_(),
       fontSize: this.getConfiguredFontSize_(),
       scrollback: this.getConfiguredScrollback_(),
