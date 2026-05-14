@@ -3,6 +3,8 @@
   crTerm
 </h1>
 
+> Note: If black square blocks appear in the terminal, disable WebGL2.
+
 crTerm is a modern terminal experience built for the AI era.
 
 It brings a real local shell into Chromium, gives terminal sessions the familiar feel of browser tabs, and delivers native-level performance through a C++ backend. crTerm is also designed to be extended with Chrome extensions, so terminal workflows can grow through the same extension model that already powers the browser.
