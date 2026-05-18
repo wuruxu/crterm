@@ -5,7 +5,6 @@ export interface CrFilesReceiveOverlayStateData {
   ipAddress: string;
   port: number;
   pinCode: string;
-  saveDir: string;
 }
 
 export interface CrTermProxy {

@@ -3,8 +3,10 @@ import '/strings.m.js';
 import 'chrome://resources/cr_elements/cr_button/cr_button.js';
 import 'chrome://resources/cr_elements/cr_dialog/cr_dialog.js';
 import 'chrome://resources/cr_elements/cr_icon_button/cr_icon_button.js';
+import 'chrome://resources/cr_elements/cr_input/cr_input.js';
 import 'chrome://resources/cr_elements/icons.html.js';
 
+import type {CrInputElement} from 'chrome://resources/cr_elements/cr_input/cr_input.js';
 import {loadTimeData} from 'chrome://resources/js/load_time_data.js';
 import {isMac, isWindows} from 'chrome://resources/js/platform.js';
 import {CrLitElement} from 'chrome://resources/lit/v3_0/lit.rollup.js';
@@ -29,7 +31,7 @@ export interface CrtermAppElement {
   $: {
     capturePreviewStage: HTMLElement,
   };
-  searchInput: HTMLInputElement,
+  searchInput: CrInputElement,
 }
 
 declare global {
@@ -67,8 +69,6 @@ export class CrtermAppElement extends CrLitElement {
   private selectionChangeListener_: {dispose(): void}|null = null;
   private middleMouseDownListener_: ((event: MouseEvent) => void)|null = null;
   private middleMousePasteTarget_: HTMLElement|null = null;
-  private crFilesReceiveOutsidePointerdownListener_:
-      ((event: PointerEvent) => void)|null = null;
   private restoredOutputLoaded_: boolean = false;
   private lastPersistedTitle_: string = '';
   private primarySelectionBuffer_: string = '';
@@ -111,10 +111,8 @@ export class CrtermAppElement extends CrLitElement {
       captureSelectionStyle_: {type: String},
       captureHasSelection_: {type: Boolean},
       crFilesReceiveOverlayVisible_: {type: Boolean},
-      crFilesReceivePanelOpen_: {type: Boolean},
       crFilesReceiveOverlayEndpoint_: {type: String},
       crFilesReceiveOverlayPinCode_: {type: String},
-      crFilesReceiveOverlaySaveDir_: {type: String},
       root_: {type: String},
       searchVisible_: {type: Boolean},
       searchQuery_: {type: String},
@@ -132,10 +130,8 @@ export class CrtermAppElement extends CrLitElement {
   protected accessor captureSelectionStyle_: string = '';
   protected accessor captureHasSelection_: boolean = false;
   protected accessor crFilesReceiveOverlayVisible_: boolean = false;
-  protected accessor crFilesReceivePanelOpen_: boolean = false;
   protected accessor crFilesReceiveOverlayEndpoint_: string = '';
   protected accessor crFilesReceiveOverlayPinCode_: string = '';
-  protected accessor crFilesReceiveOverlaySaveDir_: string = '';
   protected accessor root_: string = "";
   protected accessor searchVisible_: boolean = false;
   protected accessor searchQuery_: string = '';
@@ -280,36 +276,9 @@ export class CrtermAppElement extends CrLitElement {
     const visible =
         state.visible && !!state.ipAddress && !!state.port && !!state.pinCode;
     this.crFilesReceiveOverlayVisible_ = visible;
-    if (!visible) {
-      this.crFilesReceivePanelOpen_ = false;
-    }
     this.crFilesReceiveOverlayEndpoint_ =
         visible ? `${state.ipAddress}:${state.port}` : '';
     this.crFilesReceiveOverlayPinCode_ = visible ? state.pinCode : '';
-    this.crFilesReceiveOverlaySaveDir_ = visible ? state.saveDir : '';
-  }
-
-  protected onCrFilesReceiveButtonClick_() {
-    this.crFilesReceivePanelOpen_ = !this.crFilesReceivePanelOpen_;
-  }
-
-  protected onCrFilesReceivePanelCloseClick_() {
-    this.crFilesReceivePanelOpen_ = false;
-  }
-
-  private onDocumentPointerdown_(event: PointerEvent) {
-    if (!this.crFilesReceivePanelOpen_) {
-      return;
-    }
-    const path = event.composedPath();
-    const clickedInsideCrFilesUi = path.some(target => {
-      return target instanceof HTMLElement &&
-          (target.classList.contains('crfiles-receive-panel') ||
-           target.classList.contains('crfiles-receive-button'));
-    });
-    if (!clickedInsideCrFilesUi) {
-      this.crFilesReceivePanelOpen_ = false;
-    }
   }
 
   private ensureXtermStyles_() {
@@ -685,10 +654,6 @@ export class CrtermAppElement extends CrLitElement {
 
   override connectedCallback() {
     super.connectedCallback();
-    this.crFilesReceiveOutsidePointerdownListener_ =
-        this.onDocumentPointerdown_.bind(this);
-    document.addEventListener(
-        'pointerdown', this.crFilesReceiveOutsidePointerdownListener_, true);
     const callbackRouter = this.crtermProxy_.getCallbackRouter();
     this.listenerIds_.push(
         callbackRouter.onTermOutput.addListener((output: number[]) => {
@@ -705,11 +670,6 @@ export class CrtermAppElement extends CrLitElement {
   }
 
   override disconnectedCallback() {
-    if (this.crFilesReceiveOutsidePointerdownListener_) {
-      document.removeEventListener(
-          'pointerdown', this.crFilesReceiveOutsidePointerdownListener_, true);
-      this.crFilesReceiveOutsidePointerdownListener_ = null;
-    }
     this.resizeObserver_?.disconnect();
     this.resizeObserver_ = null;
     if (this.resizeTimeoutId_ !== null) {
@@ -747,10 +707,8 @@ export class CrtermAppElement extends CrLitElement {
     this.pendingOscSequence_ = '';
     this.restoredOutputLoaded_ = false;
     this.crFilesReceiveOverlayVisible_ = false;
-    this.crFilesReceivePanelOpen_ = false;
     this.crFilesReceiveOverlayEndpoint_ = '';
     this.crFilesReceiveOverlayPinCode_ = '';
-    this.crFilesReceiveOverlaySaveDir_ = '';
     if (this.term_) {
       this.term_.dispose();
       this.term_ = null;
@@ -831,7 +789,7 @@ export class CrtermAppElement extends CrLitElement {
 
     const searchInput =
         this.shadowRoot?.getElementById(CrtermAppElement.SEARCH_INPUT_ID) as
-        HTMLInputElement | null;
+        CrInputElement | null;
     if (searchInput && this.shadowRoot?.activeElement !== searchInput) {
       searchInput.focus();
       searchInput.select();
@@ -1092,7 +1050,11 @@ export class CrtermAppElement extends CrLitElement {
       await this.updateComplete;
       await this.crtermProxy_.activateCurrentTab();
     } catch (error) {
-      console.error('[crterm] failed to capture screen', error);
+      const captureError = error as DOMException;
+      console.error(
+          '[crterm] failed to capture screen',
+          `name=${captureError?.name ?? ''}`,
+          `message=${captureError?.message ?? ''}`, error);
       this.captureCountdownVisible_ = false;
       this.closeCaptureSelection_();
     } finally {
@@ -1377,8 +1339,8 @@ export class CrtermAppElement extends CrLitElement {
     this.term_.write(`\r\n\x1b[97;100m${line}\x1b[0m\r\n`);
   }
 
-  protected onSearchInput_(event: Event) {
-    this.searchQuery_ = (event.target as HTMLInputElement).value;
+  protected onSearchValueChanged_(event: CustomEvent<{value: string}>) {
+    this.searchQuery_ = event.detail.value;
     this.updateSearchMatches_({reveal: true});
   }
 

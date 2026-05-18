@@ -51,14 +51,16 @@ export function getHtml(this: CrtermAppElement) {
     </cr-dialog>` : ''}
   ${this.searchVisible_ ? html`
     <div class="search-box" role="search">
-      <input
+      <cr-input
           id="searchInput"
-          class="search-input"
-          type="text"
+          class="search-input stroked"
+          type="search"
           .value="${this.searchQuery_}"
           placeholder="Search terminal"
-          @input="${this.onSearchInput_}"
+          @value-changed="${this.onSearchValueChanged_}"
           @keydown="${this.onSearchKeydown_}">
+        <div slot="inline-prefix" class="cr-icon icon-search" alt=""></div>
+      </cr-input>
       <div class="search-count">${this.getSearchCountLabel_()}</div>
       <cr-icon-button
           class="search-icon-button"
@@ -96,53 +98,13 @@ export function getHtml(this: CrtermAppElement) {
                                                      'search-highlight'}"
         style="${style}"></div>` : '')}
   ${this.crFilesReceiveOverlayVisible_ ? html`
-    <div class="crfiles-receive-dock">
-      ${this.crFilesReceivePanelOpen_ ? html`
-        <div class="crfiles-receive-panel" role="status" aria-live="polite">
-          <div class="crfiles-receive-panel-header">
-            <div class="crfiles-receive-title">CrFiles Receive</div>
-            <cr-icon-button
-                class="crfiles-receive-close"
-                iron-icon="cr:close"
-                title="Close"
-                aria-label="Close"
-                @click="${this.onCrFilesReceivePanelCloseClick_}">
-            </cr-icon-button>
-          </div>
-          <div class="crfiles-receive-status">
-            <span class="crfiles-receive-running-dot"></span>
-            <span>Service started</span>
-          </div>
-          <div class="crfiles-receive-detail">
-            <span class="crfiles-receive-label">Address</span>
-            <span class="crfiles-receive-value">
-              ${this.crFilesReceiveOverlayEndpoint_}
-            </span>
-          </div>
-          <div class="crfiles-receive-inline-row">
-            <div class="crfiles-receive-detail crfiles-receive-pin-detail">
-              <span class="crfiles-receive-label">PIN</span>
-              <span class="crfiles-receive-pin">
-                ${this.crFilesReceiveOverlayPinCode_}
-              </span>
-            </div>
-            <div class="crfiles-receive-detail">
-              <span class="crfiles-receive-label">Directory</span>
-              <span class="crfiles-receive-value">
-                ${this.crFilesReceiveOverlaySaveDir_}
-              </span>
-            </div>
-          </div>
-        </div>` : ''}
-      <button
-          class="crfiles-receive-button"
-          title="CrFiles receive"
-          aria-label="CrFiles receive"
-          aria-expanded="${this.crFilesReceivePanelOpen_}"
-          @click="${this.onCrFilesReceiveButtonClick_}">
-        <img src="filedrop.svg" alt="" draggable="false">
-        <span class="crfiles-receive-button-running"></span>
-      </button>
+    <div class="crfiles-receive-overlay" aria-hidden="true">
+      <div class="crfiles-receive-overlay-endpoint">
+        ${this.crFilesReceiveOverlayEndpoint_}
+      </div>
+      <div class="crfiles-receive-overlay-pin">
+        PIN ${this.crFilesReceiveOverlayPinCode_}
+      </div>
     </div>` : ''}
   <div id="terminal"></div>
 </div>

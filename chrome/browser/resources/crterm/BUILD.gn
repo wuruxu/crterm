@@ -9,7 +9,6 @@ build_webui("build") {
   static_files = [
     "crterm.html",
     "crterm_invalid.html",
-    "filedrop.svg",
   ]
   ts_files = [
     "crterm_app.ts",

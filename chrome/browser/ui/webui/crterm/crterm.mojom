@@ -21,7 +21,6 @@ struct CrFilesReceiveOverlayState {
   string ip_address;
   uint32 port;
   string pin_code;
-  string save_dir;
 };
 
 // Used by the WebUI page to bootstrap bidirectional communication.
