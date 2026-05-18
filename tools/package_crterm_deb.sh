@@ -189,7 +189,7 @@ set -euo pipefail
 
 APP_DIR="${INSTALL_DIR}"
 export CHROME_WRAPPER="\${APP_DIR}/chrome-wrapper"
-export CHROME_DESKTOP="${PKG_NAME}.desktop"
+export CHROME_DESKTOP="${PKG_NAME}-app.desktop"
 export CHROME_VERSION_EXTRA="custom"
 export LD_LIBRARY_PATH="\${APP_DIR}:\${APP_DIR}/lib:\${APP_DIR}/lib.target\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}"
 
@@ -197,7 +197,7 @@ exec "\${APP_DIR}/chrome" "\$@"
 EOF
 chmod 0755 "${PKG_ROOT}/usr/bin/${PKG_NAME}"
 
-cat > "${PKG_ROOT}/usr/share/applications/${PKG_NAME}.desktop" <<EOF
+cat > "${PKG_ROOT}/usr/share/applications/${PKG_NAME}-app.desktop" <<EOF
 [Desktop Entry]
 Version=${VERSION}
 Type=Application
@@ -206,7 +206,7 @@ Comment=an AI-era terminal app
 Exec=${PKG_NAME} %U
 Icon=${PKG_NAME}
 Terminal=false
-StartupNotify=true
+StartupNotify=false
 StartupWMClass=crTerm
 Categories=System;TerminalEmulator;Utility;
 EOF

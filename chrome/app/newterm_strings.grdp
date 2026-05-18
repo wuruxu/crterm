@@ -7,6 +7,9 @@
   <message name="IDS_NEWTERM_OPEN_IN_HOME" desc="Button label for opening a terminal in the user's home directory.">
     Open in Home
   </message>
+  <message name="IDS_NEWTERM_BROWSE_HOME_FILES" desc="Button label for browsing files in the user's home directory.">
+    Browse Home Files
+  </message>
   <message name="IDS_NEWTERM_OPEN_IN_DIRECTORY" desc="Button label for opening a terminal in a directory. The placeholder is a path like /tmp and should not be translated.">
     Open in <ph name="DIRECTORY">$1<ex>/tmp</ex></ph>
   </message>
